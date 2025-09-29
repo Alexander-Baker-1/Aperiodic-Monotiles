@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aperiodic Monotiles</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Aperiodic Monotiles</h1>
+    
+    <div class="controls">
+        a: <input type="range" id="a" min="0" max="2" value="1" step="0.01"> <span id="a-val">1.000</span><br>
+        b: <input type="range" id="b" min="0" max="2" value="1" step="0.01"> <span id="b-val">1.000</span><br>
+        curve: <input type="range" id="curve" min="0" max="1" value="0" step="0.01"> <span id="curve-val">0.000</span>
+    </div>
+    
+    <canvas id="canvas" width="600" height="400"></canvas>
+    
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
