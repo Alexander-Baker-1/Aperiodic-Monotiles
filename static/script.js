@@ -93,7 +93,7 @@ function draw() {
     // Find center of canvas
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    
+
     // Get current slider values
     const a = parseFloat(aSlider.value);
     const b = parseFloat(bSlider.value);
@@ -104,21 +104,21 @@ function draw() {
     
     // Get list of directions to draw
     const edges = getHatEdges(a, b);
-    
+
     // Start at center of canvas
     let x = centerX;
     let y = centerY;
-    
+
     // Start drawing
     ctx.beginPath();
     ctx.moveTo(x, y);
-    
+
     // Draw each edge of shape
     edges.forEach(([dx, dy]) => {
         // Scale direction to fit on screen
         const scaledDx = dx * scale;
         const scaledDy = dy * scale;
-        
+
         // If curve slider is turned on, draw bezier curves
         if (curve > 0) {
             // Get control point numbers
@@ -139,12 +139,12 @@ function draw() {
         x += scaledDx;
         y += scaledDy;
     });
-    
+
     // Close shape
     ctx.closePath();
     // Fill shape with color
     ctx.fill();
-    
+
     // Draw thin border around shape
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
@@ -164,33 +164,6 @@ function loadPreset(presetKey) {
     draw();
 }
 
-// Create preset buttons automatically
-function createPresetButtons() {
-    // Find or create container for buttons
-    let container = document.getElementById('presets');
-    
-    // If no preset container exists, create one
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'presets';
-        container.style.cssText = 'margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap;';
-        document.body.insertBefore(container, canvas);
-    }
-    
-    // Create button for each preset
-    Object.keys(PRESETS).forEach(key => {
-        const preset = PRESETS[key];
-        const button = document.createElement('button');
-        button.textContent = preset.name;
-        button.style.cssText = 'padding: 8px 16px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px;';
-        
-        // When clicked, load preset
-        button.onclick = () => loadPreset(key);
-        
-        container.appendChild(button);
-    });
-}
-
 // Update display and redraw when sliders are moved
 [aSlider, bSlider, curveSlider].forEach(slider => {
     slider.addEventListener('input', () => {
@@ -198,9 +171,6 @@ function createPresetButtons() {
         draw();
     });
 });
-
-// Create preset buttons when page loads
-createPresetButtons();
 
 // Show starting values when page loads
 updateValues();
