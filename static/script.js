@@ -72,27 +72,44 @@ function calculateScale(a, b) {
     
     // Add margin
     const margin = 0.2;
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
+    const canvasWidth = 600;
+    const canvasHeight = 400;
     
     // Calculate scale to fit both width and height
     const scaleX = (canvasWidth * (1 - 2 * margin)) / width;
     const scaleY = (canvasHeight * (1 - 2 * margin)) / height;
+    const scale = Math.min(scaleX, scaleY);
     
-    // Use smaller scale so it fits both directions
-    return Math.min(scaleX, scaleY);
+    // Return scale and offsets
+    return {
+        scale: scale,
+        xOffset: (width / 2) * scale,
+    };
 }
 
 // Main function draws whole shape
 function draw() {
+    // Make canvas sharp on fancy screens
+    const dpr = window.devicePixelRatio || 1;
+
+    const displayWidth = 600;
+    const displayHeight = 400;
+    
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+    canvas.style.width = '600px';
+    canvas.style.height = '400px';
+    
+    ctx.scale(dpr, dpr);
+
     // Erase everything on canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     // Set color to black
     ctx.fillStyle = 'black';
     
     // Find center of canvas
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    const centerX = displayWidth / 2;
+    const centerY = displayHeight / 2;
 
     // Get current slider values
     const a = parseFloat(aSlider.value);
@@ -100,13 +117,13 @@ function draw() {
     const curve = parseFloat(curveSlider.value);
     
     // Calculate best scale to fit shape on screen
-    const scale = calculateScale(a, b);
+    const { scale, xOffset } = calculateScale(a, b);
     
     // Get list of directions to draw
     const edges = getHatEdges(a, b);
 
     // Start at center of canvas
-    let x = centerX;
+    let x = centerX - xOffset;
     let y = centerY;
 
     // Start drawing
@@ -158,6 +175,7 @@ function loadPreset(presetKey) {
     // Set slider values to preset numbers
     aSlider.value = preset.a;
     bSlider.value = preset.b;
+    curveSlider.value = 0;
     
     // Update display and redraw
     updateValues();

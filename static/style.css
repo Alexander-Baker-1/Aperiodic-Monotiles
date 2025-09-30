@@ -1,0 +1,56 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.controls {
+    background: white;
+    padding: 25px;
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+
+.controls label {
+    display: inline-block;
+    width: 60px;
+}
+
+.controls input[type="range"] {
+    width: 250px;
+    margin: 0 15px;
+}
+
+.controls span {
+    display: inline-block;
+    width: 60px;
+}
+
+#presets {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+#presets button {
+    padding: 10px 20px;
+    background: #eee;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+#presets button:hover {
+    background: #ddd;
+}
+
+#canvas {
+    display: block;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+}
