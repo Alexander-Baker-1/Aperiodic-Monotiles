@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Aperiodic Tiling</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Infinite Aperiodic Tiling</h1>
+    
+    <div class="controls">
+        <label for="a">a:</label>
+        <input type="range" id="a" min="0" max="2" value="1" step="0.01">
+        <span id="a-val">1.000</span>
+        
+        <label for="b">b:</label>
+        <input type="range" id="b" min="0" max="2" value="1" step="0.01">
+        <span id="b-val">1.000</span>
+        
+        <label for="curve">curve:</label>
+        <input type="range" id="curve" min="0" max="1" value="0" step="0.01">
+        <span id="curve-val">0.000</span>
+    </div>
+    
+    <canvas id="canvas" width="800" height="600"></canvas>
+    
+    <script src="{{ url_for('static', filename='continuum.js') }}"></script>
+</body>
+</html>
