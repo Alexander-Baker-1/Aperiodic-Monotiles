@@ -147,7 +147,7 @@ function drawAll() {
     const p3 = matVecMul(tile1Mat, hatOutline[9]);
     const p4 = matVecMul(tile1Mat, hatOutline[10]);
     
-    const tile3Mat = matchShapes(hatOutline[5], hatOutline[6], p3, p4);
+    const tile3Mat = matchShapes(hatOutline[11], hatOutline[10], p3, p4);
     
     drawTileWithMatrix(tile3Mat, a, b, curve, 'rgba(100, 255, 100, 0.7)');
     
