@@ -76,6 +76,101 @@ class TilingApp {
             [13, 14], tile5, [7, 8],
             { flipped: true, color: Tile.DARK_BLUE }
         );
+
+        const tile7 = tiling.addTile(
+            [11, 12], tile6, [5, 6],
+            { flipped: false, color: Tile.LIGHT_BLUE }
+        );
+
+        const tile8 = tiling.addTile(
+            [13, 12], tile7, [7, 8],
+            { flipped: false, color: Tile.LIGHT_BLUE }
+        );
+
+        const tile9 = tiling.addTile(
+            [10, 11], tile8, [4, 5],
+            { flipped: true, color: Tile.DARK_BLUE }
+        );
+
+        const tile10 = tiling.addTile(
+            [10, 11], tile9, [4, 5],
+            { flipped: false, color: Tile.LIGHT_BLUE }
+        );
+
+        const tile11 = tiling.addTile(
+            [10, 11], tile9, [14, 1],
+            { flipped: false, color: Tile.LIGHT_BLUE }
+        );
+
+        const tile12 = tiling.addTile(
+            [1, 14], tile11, [5, 6],
+            { flipped: false, color: Tile.LIGHT_BLUE }
+        );
+
+        const tile13 = tiling.addTile(
+            [7, 6], tile12, [9, 10],
+            { flipped: false, color: Tile.WHITE }
+        );
+
+        const tile14 = tiling.addTile(
+            [1, 14], tile3, [5, 6],
+            { flipped: false, color: Tile.GRAY }
+        );
+
+        const tile15 = tiling.addTile(
+            [3, 2], tile14, [9, 10],
+            { flipped: false, color: Tile.GRAY }
+        );
+
+        const tile16 = tiling.addTile(
+            [9, 8], tile15, [7, 8],
+            { flipped: false, color: Tile.WHITE }
+        );
+
+        const tile17 = tiling.addTile(
+            [10, 9], tile16, [2, 3],
+            { flipped: false, color: Tile.WHITE }
+        );
+
+        const tile18 = tiling.addTile(
+            [1, 14], tile5, [1, 2],
+            { flipped: false, color: Tile.GRAY }
+        );
+
+        const tile19 = tiling.addTile(
+            [1, 14], tile18, [11, 12],
+            { flipped: false, color: Tile.GRAY }
+        );
+
+        const tile20 = tiling.addTile(
+            [3, 4], tile19, [9, 8],
+            { flipped: false, color: Tile.WHITE }
+        );
+
+        const tile21 = tiling.addTile(
+            [2, 3], tile20, [10, 9],
+            { flipped: false, color: Tile.WHITE }
+        );
+
+        const tile22 = tiling.addTile(
+            [1, 14], tile10, [5, 6],
+            { flipped: false, color: Tile.GRAY }
+        );
+
+        const tile23 = tiling.addTile(
+            [13, 12], tile10, [9, 10],
+            { flipped: false, color: Tile.GRAY }
+        );
+
+        const tile24 = tiling.addTile(
+            [4, 3], tile23, [8, 9],
+            { flipped: false, color: Tile.WHITE }
+        );
+
+        const tile25 = tiling.addTile(
+            [3, 2], tile24, [9, 10],
+            { flipped: false, color: Tile.WHITE }
+        );
         
         // Draw everything
         tiling.draw(this.ctx, curve);

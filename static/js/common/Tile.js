@@ -2,10 +2,10 @@ import { Matrix } from './Matrix.js';
 
 export class Tile {
     // Color constants as static properties
-    static DARK_BLUE = 'rgba(20, 50, 130, 1)';
-    static LIGHT_BLUE = 'rgba(80, 150, 180, 1)';
-    static WHITE = 'rgba(255, 255, 255, 1)';
-    static GRAY = 'rgba(128, 128, 128, 1)';
+    static DARK_BLUE = 'rgba(0, 137, 212, 1)';
+    static LIGHT_BLUE = 'rgba(148, 205, 235, 1)';
+    static WHITE = 'rgba(250, 250, 250, 1)';
+    static GRAY = 'rgba(191, 191, 191, 1)';
     
     constructor(transform, geometry, color = Tile.LIGHT_BLUE) {
         this.transform = transform;
@@ -49,8 +49,15 @@ export class Tile {
         }
         
         ctx.closePath();
+        
+        // Fill the tile
         ctx.fillStyle = this.color;
         ctx.fill();
+        
+        // Add black outline
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 0.025;
+        ctx.stroke();
         
         ctx.restore();
     }
