@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a> | 
+        <a href="{{ url_for('single') }}">Single Tile</a> |
+        <a href="{{ url_for('continuum') }}">Continuum</a> 
+    </nav>
+
     <h1>Infinite Aperiodic Tiling</h1>
     
     <div class="controls">
@@ -25,6 +31,6 @@
     
     <canvas id="canvas" width="800" height="600"></canvas>
     
-    <script src="{{ url_for('static', filename='continuum.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/continuum.js') }}"></script>
 </body>
 </html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Single Aperiodic Monotile</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <nav>
+            <a href="{{ url_for('index') }}">Home</a> | 
+            <a href="{{ url_for('single') }}">Single Tile</a> |
+            <a href="{{ url_for('continuum') }}">Continuum</a> 
+        </nav>
+
+        <h1>Single Aperiodic Monotile</h1>
+
+        <div class="controls">
+            <label for="a">a:</label>
+            <input type="range" id="a" min="0" max="2" value="1" step="0.01">
+            <span id="a-val">1.000</span>
+            
+            <label for="b">b:</label>
+            <input type="range" id="b" min="0" max="2" value="1" step="0.01">
+            <span id="b-val">1.000</span>
+            
+            <label for="curve">curve:</label>
+            <input type="range" id="curve" min="0" max="1" value="0" step="0.01">
+            <span id="curve-val">0.000</span>
+        </div>
+        <div id="presets">
+            <button onclick="loadPreset('chevron')">Chevron</button>
+            <button onclick="loadPreset('hat')">Hat</button>
+            <button onclick="loadPreset('spectre')">Spectre</button>
+            <button onclick="loadPreset('turtle')">Turtle</button>
+            <button onclick="loadPreset('comet')">Comet</button>
+        </div>
+        
+        <canvas id="canvas" width="600" height="400"></canvas>
+        
+        <script type="module" src="{{ url_for('static', filename='js/single.js') }}"></script>
+        </body>
+</html>
