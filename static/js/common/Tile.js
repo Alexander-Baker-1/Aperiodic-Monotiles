@@ -1,7 +1,13 @@
 import { Matrix } from './Matrix.js';
 
 export class Tile {
-    constructor(transform, geometry, color = 'rgba(80, 150, 180, 1)') {
+    // Color constants as static properties
+    static DARK_BLUE = 'rgba(20, 50, 130, 1)';
+    static LIGHT_BLUE = 'rgba(80, 150, 180, 1)';
+    static WHITE = 'rgba(255, 255, 255, 1)';
+    static GRAY = 'rgba(128, 128, 128, 1)';
+    
+    constructor(transform, geometry, color = Tile.LIGHT_BLUE) {
         this.transform = transform;
         this.geometry = geometry;
         this.color = color;
@@ -69,13 +75,13 @@ export class Tile {
     }
     
     static createAttached(sourceEdge, targetTile, targetEdge, options = {}) {
-        const { flipped = false, color = 'rgba(80, 150, 180, 1)' } = options;
+        const { flipped = false, color = Tile.LIGHT_BLUE } = options;
         const geometry = targetTile.geometry;
         
         const [targetP1, targetP2] = targetTile.getEdge(targetEdge[0], targetEdge[1]);
         
         let transform;
-        if (flipped) {
+        if (!flipped) {
             const flipX = Matrix.flipX();
             const v1 = flipX.transformPoint(geometry.vertices[sourceEdge[0]]);
             const v2 = flipX.transformPoint(geometry.vertices[sourceEdge[1]]);

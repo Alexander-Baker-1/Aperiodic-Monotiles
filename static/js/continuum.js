@@ -1,6 +1,7 @@
 import { Matrix } from './common/Matrix.js';
 import { HatGeometry } from './common/HatGeometry.js';
 import { TilingSystem } from './common/TilingSystem.js';
+import { Tile } from './common/Tile.js';
 
 class TilingApp {
     constructor(canvasId, aSlider, bSlider, curveSlider) {
@@ -48,32 +49,32 @@ class TilingApp {
         const flip = Matrix.flipX();
         
         const tile1Transform = translation.multiply(rotation).multiply(scaling).multiply(flip);
-        const tile1 = tiling.addRootTile(tile1Transform, 'rgba(80, 150, 180, 1)');
+        const tile1 = tiling.addRootTile(tile1Transform, Tile.LIGHT_BLUE);
         
         // Add connected tiles
         const tile2 = tiling.addTile(
             [3, 4], tile1, [13, 14],
-            { color: 'rgba(20, 50, 130, 1)' }
+            { flipped: true, color: Tile.DARK_BLUE }
         );
-        
+
         const tile3 = tiling.addTile(
             [12, 13], tile2, [6, 7],
-            { flipped: true, color: 'rgba(80, 150, 180, 1)' }
+            { flipped: false, color: Tile.LIGHT_BLUE }
         );
-        
+
         const tile4 = tiling.addTile(
             [3, 4], tile1, [7, 6],
-            { flipped: true, color: 'rgba(80, 150, 180, 1)' }
+            { flipped: false, color: Tile.LIGHT_BLUE }
         );
-        
+
         const tile5 = tiling.addTile(
             [9, 8], tile4, [9, 10],
-            { flipped: true, color: 'rgba(80, 150, 180, 1)' }
+            { flipped: false, color: Tile.LIGHT_BLUE }
         );
-        
+
         const tile6 = tiling.addTile(
             [13, 14], tile5, [7, 8],
-            { color: 'rgba(20, 50, 130, 1)' }
+            { flipped: true, color: Tile.DARK_BLUE }
         );
         
         // Draw everything
