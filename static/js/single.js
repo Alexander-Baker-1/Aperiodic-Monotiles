@@ -1,196 +1,159 @@
-// Get drawing area from webpage
-const canvas = document.getElementById('canvas');
-// Get tool to draw on canvas
-const ctx = canvas.getContext('2d');
+import { HatGeometry } from './common/HatGeometry.js';
 
-// Get three slider controls from webpage
-const aSlider = document.getElementById('a');
-const bSlider = document.getElementById('b');
-const curveSlider = document.getElementById('curve');
-
-const COS_60 = Math.cos(Math.PI/3);  // 0.5
-const SIN_60 = Math.sin(Math.PI/3);  // √3/2
-
-// Special tile presets
-const PRESETS = {
-    chevron: { a: 0, b: 1, name: 'Chevron' },
-    hat: { a: 1, b: Math.sqrt(3), name: 'Hat' },
-    spectre: { a: 1, b: 1, name: 'Spectre' },
-    turtle: { a: Math.sqrt(3), b: 1, name: 'Turtle' },
-    comet: { a: 1, b: 0, name: 'Comet' }
-};
-
-// Shows slider numbers on screen
-function updateValues() {
-    document.getElementById('a-val').textContent = parseFloat(aSlider.value).toFixed(3);
-    document.getElementById('b-val').textContent = parseFloat(bSlider.value).toFixed(3);
-    document.getElementById('curve-val').textContent = parseFloat(curveSlider.value).toFixed(3);
-}
-
-// Creates list of directions for drawing shape
-function getHatEdges(a, b) {
-    return [
-        [COS_60 * b, SIN_60 * b],
-        [b, 0],
-        [0, a],
-        [SIN_60 * a, COS_60 * a],
-        [COS_60 * b, -SIN_60 * b],
-        [-COS_60 * b, -SIN_60 * b],
-        [SIN_60 * a, -COS_60 * a],
-        [0, -a],
-        [0, -a],
-        [-SIN_60 * a, -COS_60 * a],
-        [-COS_60 * b, SIN_60 * b],
-        [-b, 0],
-        [0, a],
-        [-SIN_60 * a, COS_60 * a]
-    ];
-}
-
-// Makes control points for bezier curves
-function makeControlPoints(dx, dy, curveAmount) {
-    // Turn direction 90 degrees
-    const nx = dy;
-    const ny = -dx;
-    
-    // Return two control points + end point
-    return [
-        -curveAmount * nx + dx/2,
-        -curveAmount * ny + dy/2,
-        curveAmount * nx + dx/2,
-        curveAmount * ny + dy/2,
-        dx,
-        dy
-    ];
-}
-
-// Calculate best scale to fit shape in canvas
-function calculateScale(a, b) {
-    // Calculate width and height of shape
-    const width = (1 + COS_60) * b + 2 * SIN_60 * a;
-    const height = 2 * SIN_60 * b + 2 * (1 + COS_60) * a;
-    
-    // Add margin
-    const margin = 0.2;
-    const canvasWidth = 600;
-    const canvasHeight = 400;
-    
-    // Calculate scale to fit both width and height
-    const scaleX = (canvasWidth * (1 - 2 * margin)) / width;
-    const scaleY = (canvasHeight * (1 - 2 * margin)) / height;
-    const scale = Math.min(scaleX, scaleY);
-    
-    // Return scale and offsets
-    return {
-        scale: scale,
-        xOffset: (width / 2) * scale,
+class SingleTileApp {
+    static PRESETS = {
+        chevron: { a: 0, b: 1, name: 'Chevron' },
+        hat: { a: 1, b: Math.sqrt(3), name: 'Hat' },
+        spectre: { a: 1, b: 1, name: 'Spectre' },
+        turtle: { a: Math.sqrt(3), b: 1, name: 'Turtle' },
+        comet: { a: 1, b: 0, name: 'Comet' }
     };
-}
 
-// Main function draws whole shape
-function draw() {
-    // Make canvas sharp on fancy screens
-    const dpr = window.devicePixelRatio || 1;
-
-    const displayWidth = 600;
-    const displayHeight = 400;
-    
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-    canvas.style.width = '600px';
-    canvas.style.height = '400px';
-    
-    ctx.scale(dpr, dpr);
-
-    // Erase everything on canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Set color to black
-    ctx.fillStyle = 'black';
-    
-    // Find center of canvas
-    const centerX = displayWidth / 2;
-    const centerY = displayHeight / 2;
-
-    // Get current slider values
-    const a = parseFloat(aSlider.value);
-    const b = parseFloat(bSlider.value);
-    const curve = parseFloat(curveSlider.value);
-    
-    // Calculate best scale to fit shape on screen
-    const { scale, xOffset } = calculateScale(a, b);
-    
-    // Get list of directions to draw
-    const edges = getHatEdges(a, b);
-
-    // Start at center of canvas
-    let x = centerX - xOffset;
-    let y = centerY;
-
-    // Start drawing
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-
-    // Draw each edge of shape
-    edges.forEach(([dx, dy]) => {
-        // Scale direction to fit on screen
-        const scaledDx = dx * scale;
-        const scaledDy = dy * scale;
-
-        // If curve slider is turned on, draw bezier curves
-        if (curve > 0) {
-            // Get control point numbers
-            const [cp1x, cp1y, cp2x, cp2y, endX, endY] = makeControlPoints(scaledDx, scaledDy, curve);
-            
-            // Draw bezier curve using control points
-            ctx.bezierCurveTo(
-                x + cp1x, y + cp1y,
-                x + cp2x, y + cp2y,
-                x + endX, y + endY
-            );
-        } else {
-            // If curve slider is off, draw straight lines
-            ctx.lineTo(x + scaledDx, y + scaledDy);
-        }
+    constructor(canvasId, aSlider, bSlider, curveSlider) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
         
-        // Move to end of edge
-        x += scaledDx;
-        y += scaledDy;
-    });
-
-    // Close shape
-    ctx.closePath();
-    // Fill shape with color
-    ctx.fill();
-
-    // Draw thin border around shape
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+        this.aSlider = aSlider;
+        this.bSlider = bSlider;
+        this.curveSlider = curveSlider;
+        
+        this.displayWidth = 600;
+        this.displayHeight = 400;
+        
+        this.setupCanvas();
+        this.setupEventListeners();
+        this.updateValues();
+        this.draw();
+    }
+    
+    setupCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        
+        this.canvas.width = this.displayWidth * dpr;
+        this.canvas.height = this.displayHeight * dpr;
+        this.canvas.style.width = `${this.displayWidth}px`;
+        this.canvas.style.height = `${this.displayHeight}px`;
+        
+        this.ctx.scale(dpr, dpr);
+    }
+    
+    setupEventListeners() {
+        [this.aSlider, this.bSlider, this.curveSlider].forEach(slider => {
+            slider.addEventListener('input', () => {
+                this.updateValues();
+                this.draw();
+            });
+        });
+    }
+    
+    updateValues() {
+        document.getElementById('a-val').textContent = parseFloat(this.aSlider.value).toFixed(3);
+        document.getElementById('b-val').textContent = parseFloat(this.bSlider.value).toFixed(3);
+        document.getElementById('curve-val').textContent = parseFloat(this.curveSlider.value).toFixed(3);
+    }
+    
+    calculateScale(a, b) {
+        const COS_60 = Math.cos(Math.PI/3);
+        const SIN_60 = Math.sin(Math.PI/3);
+        
+        const width = (1 + COS_60) * b + 2 * SIN_60 * a;
+        const height = 2 * SIN_60 * b + 2 * (1 + COS_60) * a;
+        
+        const margin = 0.2;
+        const scaleX = (this.displayWidth * (1 - 2 * margin)) / width;
+        const scaleY = (this.displayHeight * (1 - 2 * margin)) / height;
+        const scale = Math.min(scaleX, scaleY);
+        
+        return {
+            scale: scale,
+            xOffset: (width / 2) * scale,
+        };
+    }
+    
+    makeControlPoints(dx, dy, curveAmount) {
+        const nx = dy;
+        const ny = -dx;
+        
+        return [
+            -curveAmount * nx + dx/2,
+            -curveAmount * ny + dy/2,
+            curveAmount * nx + dx/2,
+            curveAmount * ny + dy/2,
+            dx,
+            dy
+        ];
+    }
+    
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        const a = parseFloat(this.aSlider.value);
+        const b = parseFloat(this.bSlider.value);
+        const curve = parseFloat(this.curveSlider.value);
+        
+        const geometry = new HatGeometry(a, b);
+        const edges = geometry.getEdgeMoves();
+        
+        const { scale, xOffset } = this.calculateScale(a, b);
+        
+        const centerX = this.displayWidth / 2;
+        const centerY = this.displayHeight / 2;
+        
+        let x = centerX - xOffset;
+        let y = centerY;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y);
+        
+        edges.forEach(([dx, dy]) => {
+            const scaledDx = dx * scale;
+            const scaledDy = dy * scale;
+            
+            if (curve > 0) {
+                const [cp1x, cp1y, cp2x, cp2y, endX, endY] = 
+                    this.makeControlPoints(scaledDx, scaledDy, curve);
+                
+                this.ctx.bezierCurveTo(
+                    x + cp1x, y + cp1y,
+                    x + cp2x, y + cp2y,
+                    x + endX, y + endY
+                );
+            } else {
+                this.ctx.lineTo(x + scaledDx, y + scaledDy);
+            }
+            
+            x += scaledDx;
+            y += scaledDy;
+        });
+        
+        this.ctx.closePath();
+        this.ctx.fillStyle = 'black';
+        this.ctx.fill();
+        
+        this.ctx.strokeStyle = '#333';
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+    }
+    
+    loadPreset(presetKey) {
+        const preset = SingleTileApp.PRESETS[presetKey];
+        
+        this.aSlider.value = preset.a;
+        this.bSlider.value = preset.b;
+        this.curveSlider.value = 0;
+        
+        this.updateValues();
+        this.draw();
+    }
 }
 
-// Function to load preset tile shape
-function loadPreset(presetKey) {
-    const preset = PRESETS[presetKey];
-    
-    // Set slider values to preset numbers
-    aSlider.value = preset.a;
-    bSlider.value = preset.b;
-    curveSlider.value = 0;
-    
-    // Update display and redraw
-    updateValues();
-    draw();
-}
+// Initialize the app
+const app = new SingleTileApp(
+    'canvas',
+    document.getElementById('a'),
+    document.getElementById('b'),
+    document.getElementById('curve')
+);
 
-// Update display and redraw when sliders are moved
-[aSlider, bSlider, curveSlider].forEach(slider => {
-    slider.addEventListener('input', () => {
-        updateValues(); 
-        draw();
-    });
-});
-
-// Show starting values when page loads
-updateValues();
-// Draw shape for first time
-draw();
+// Expose loadPreset for HTML buttons
+window.loadPreset = (presetKey) => app.loadPreset(presetKey);
