@@ -153,12 +153,41 @@ function drawAll() {
     const p3 = matVecMul(tile2Mat, hatOutline[6]);
     const p4 = matVecMul(tile2Mat, hatOutline[7]);
 
-    const v12flipped = matVecMul(flipX, hatOutline[12]);
-    const v11flipped = matVecMul(flipX, hatOutline[13]);
-    const tile3Mat = matchShapes(v12flipped, v11flipped, p3, p4);
+    const vflipped1 = matVecMul(flipX, hatOutline[12]);
+    const vflipped2 = matVecMul(flipX, hatOutline[13]);
+    const tile3Mat = matchShapes(vflipped1, vflipped2, p3, p4);
     
     const tile3MatWithFlip = matMul(tile3Mat, flipX);
     drawTileWithMatrix(tile3MatWithFlip, a, b, curve, 'rgba(80, 150, 180, 1)');
+
+    const p5 = matVecMul(tile1Mat, hatOutline[7]);
+    const p6 = matVecMul(tile1Mat, hatOutline[6]);
+
+    const vflipped3 = matVecMul(flipX, hatOutline[3]);
+    const vflipped4 = matVecMul(flipX, hatOutline[4]);
+    const tile4Mat = matchShapes(vflipped3, vflipped4, p5, p6);
+    
+    const tile4MatWithFlip = matMul(tile4Mat, flipX);
+    drawTileWithMatrix(tile4MatWithFlip, a, b, curve, 'rgba(80, 150, 180, 1)');
+
+    const p7 = matVecMul(tile4MatWithFlip, hatOutline[9]);
+    const p8 = matVecMul(tile4MatWithFlip, hatOutline[10]);
+
+    const vflipped5 = matVecMul(flipX, hatOutline[9]);
+    const vflipped6 = matVecMul(flipX, hatOutline[8]);
+    const tile5Mat = matchShapes(vflipped5, vflipped6, p7, p8);
+    
+    const tile5MatWithFlip = matMul(tile5Mat, flipX);
+    drawTileWithMatrix(tile5MatWithFlip, a, b, curve, 'rgba(80, 150, 180, 1)');
+
+    const p9 = matVecMul(tile5MatWithFlip, hatOutline[7]);
+    const p10 = matVecMul(tile5MatWithFlip, hatOutline[8]);
+
+    const tile6Mat = matchShapes(hatOutline[13], hatOutline[14], p9, p10);
+    drawTileWithMatrix(tile6Mat, a, b, curve, 'rgba(20, 50, 130, 1)');
+
+    const p11 = matVecMul(tile6Mat, hatOutline[6]);
+    const p12 = matVecMul(tile6Mat, hatOutline[7]);
 
     // Draw vertex numbers on all tiles
     ctx.save();
@@ -181,6 +210,21 @@ function drawAll() {
 
     for (let i = 0; i < hatOutline.length; i++) {
         const p = matVecMul(tile3MatWithFlip, hatOutline[i]);
+        ctx.fillText(i, p.x, p.y);
+    }
+
+    for (let i = 0; i < hatOutline.length; i++) {
+        const p = matVecMul(tile4MatWithFlip, hatOutline[i]);
+        ctx.fillText(i, p.x, p.y);
+    }
+
+    for (let i = 0; i < hatOutline.length; i++) {
+        const p = matVecMul(tile5MatWithFlip, hatOutline[i]);
+        ctx.fillText(i, p.x, p.y);
+    }
+
+    for (let i = 0; i < hatOutline.length; i++) {
+        const p = matVecMul(tile6Mat, hatOutline[i]);
         ctx.fillText(i, p.x, p.y);
     }
 
