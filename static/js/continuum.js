@@ -4,6 +4,14 @@ import { TilingSystem } from './common/TilingSystem.js';
 import { Tile } from './common/Tile.js';
 
 class TilingApp {
+    static PRESETS = {
+        chevron: { a: 0, b: 1, name: 'Chevron' },
+        hat: { a: 1, b: Math.sqrt(3), name: 'Hat' },
+        spectre: { a: 1, b: 1, name: 'Spectre' },
+        turtle: { a: Math.sqrt(3), b: 1, name: 'Turtle' },
+        comet: { a: 1, b: 0, name: 'Comet' }
+    };
+
     constructor(canvasId, aSlider, bSlider, curveSlider) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
@@ -30,6 +38,17 @@ class TilingApp {
         document.getElementById('a-val').textContent = parseFloat(this.aSlider.value).toFixed(3);
         document.getElementById('b-val').textContent = parseFloat(this.bSlider.value).toFixed(3);
         document.getElementById('curve-val').textContent = parseFloat(this.curveSlider.value).toFixed(3);
+    }
+    
+    loadPreset(presetKey) {
+        const preset = TilingApp.PRESETS[presetKey];
+        
+        this.aSlider.value = preset.a;
+        this.bSlider.value = preset.b;
+        this.curveSlider.value = 0;
+        
+        this.updateValues();
+        this.draw();
     }
     
     draw() {
@@ -185,3 +204,6 @@ const app = new TilingApp(
     document.getElementById('b'),
     document.getElementById('curve')
 );
+
+// Expose loadPreset for HTML buttons
+window.loadPreset = (presetKey) => app.loadPreset(presetKey);

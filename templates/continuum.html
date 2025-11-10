@@ -10,9 +10,9 @@
     <nav>
         <a href="{{ url_for('index') }}">Home</a> | 
         <a href="{{ url_for('single') }}">Single Tile</a> |
-        <a href="{{ url_for('continuum') }}">Continuum</a> 
+        <a href="{{ url_for('continuum') }}">Continuum</a>
     </nav>
-
+    
     <h1>Infinite Aperiodic Tiling</h1>
     
     <div class="controls">
@@ -27,6 +27,14 @@
         <label for="curve">curve:</label>
         <input type="range" id="curve" min="0" max="1" value="0" step="0.01">
         <span id="curve-val">0.000</span>
+    </div>
+    
+    <div class="presets">
+        <button onclick="loadPreset('chevron')">Chevron</button>
+        <button onclick="loadPreset('hat')">Hat</button>
+        <button onclick="loadPreset('spectre')">Spectre</button>
+        <button onclick="loadPreset('turtle')">Turtle</button>
+        <button onclick="loadPreset('comet')">Comet</button>
     </div>
     
     <canvas id="canvas" width="800" height="600"></canvas>

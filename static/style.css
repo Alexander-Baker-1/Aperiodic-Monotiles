@@ -32,22 +32,33 @@ h1 {
     width: 60px;
 }
 
-#presets {
+/* Preset Buttons */
+#presets,
+.presets {
     display: flex;
     gap: 10px;
     justify-content: center;
     margin-bottom: 30px;
 }
 
-#presets button {
+#presets button,
+.presets button {
     padding: 10px 20px;
     background: #eee;
     border: 1px solid #ccc;
     cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s ease;
 }
 
-#presets button:hover {
+#presets button:hover,
+.presets button:hover {
     background: #ddd;
+}
+
+#presets button:active,
+.presets button:active {
+    background: #ccc;
 }
 
 #canvas {
