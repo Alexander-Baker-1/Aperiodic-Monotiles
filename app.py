@@ -10,9 +10,9 @@ def index():
 def single():
     return render_template('single.html')
 
-@app.route('/continuum')
-def continuum():
-    return render_template('continuum.html')
+@app.route('/cluster')
+def cluster():
+    return render_template('cluster.html')
 
 if __name__ == '__main__':
     app.run(debug=True)

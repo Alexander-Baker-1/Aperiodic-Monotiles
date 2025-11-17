@@ -54,6 +54,14 @@ export class Matrix {
         
         const tdx = targetP2.x - targetP1.x;
         const tdy = targetP2.y - targetP1.y;
+
+        const srcLen = dx*dx + dy*dy;
+        const tgtLen = tdx*tdx + tdy*tdy;
+        
+        // Prevent division by zero
+        if (srcLen === 0 || tgtLen === 0) {
+            return Matrix.translation(targetP1.x, targetP1.y);
+        }
         
         const scale = Math.sqrt((tdx*tdx + tdy*tdy) / (dx*dx + dy*dy));
         

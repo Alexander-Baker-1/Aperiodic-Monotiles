@@ -55,6 +55,13 @@ class TilingApp {
         const a = parseFloat(this.aSlider.value);
         const b = parseFloat(this.bSlider.value);
         const curve = parseFloat(this.curveSlider.value);
+
+        if (a === 0) {
+            a = 0.001;
+        }
+        if (b === 0) {
+            b = 0.001;
+        }
         
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -63,7 +70,7 @@ class TilingApp {
         
         // Create the initial tile
         const rotation = Matrix.rotation(3 * Math.PI / 2);
-        const scaling = Matrix.scale(40);
+        const scaling = Matrix.scale(30);
         const translation = Matrix.translation(530, 206);
         const flip = Matrix.flipX();
         
@@ -193,7 +200,7 @@ class TilingApp {
         
         // Draw everything
         tiling.draw(this.ctx, curve);
-        tiling.drawVertexLabels(this.ctx);
+        // tiling.drawVertexLabels(this.ctx);
     }
 }
 
