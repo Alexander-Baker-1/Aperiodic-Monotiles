@@ -14,5 +14,9 @@ def single():
 def cluster():
     return render_template('cluster.html')
 
+@app.route('/infinite')
+def infinite():
+    return render_template('infinite.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
