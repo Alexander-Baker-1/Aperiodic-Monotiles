@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Substitution System - Aperiodic Monotile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a> | 
+        <a href="{{ url_for('single') }}">Single Tile</a> |
+        <a href="{{ url_for('cluster') }}">Tiling Pattern</a> |
+        <a href="{{ url_for('infinite') }}">Infinite Explorer</a> |
+        <a href="{{ url_for('substitution') }}">Substitution System</a> |
+        <a href="{{ url_for('chains') }}">Local Patterns</a>
+    </nav>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Substitution System</h1>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas" width="800" height="600"></canvas>
+        </div>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/substitution.js') }}"></script>
+</body>
+</html>
