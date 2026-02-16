@@ -104,7 +104,7 @@
                 1: {
                     // Same chirality
                     0: { reversed: true, flipped: false, blocks: [[0, 11], [2, 3], [2, 9], [2, 13], [3, 2], [3, 6], [3, 8], [3, 12], [4, 1]] },
-                    4: { reversed: true, flipped: false, blocks: [[0, 11], [2, 3], [2, 9], [2, 13], [3, 6], [3, 12], [12, 9]] },
+                    4: { reversed: true, flipped: false, blocks: [[0, 11], [2, 3], [2, 9], [2, 13], [3, 6], [3, 12], [12, 9], [13, 8]] },
                     10: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [2, 3], [2, 9], [2, 13], [3, 12], [12, 3], [12, 7], [13, 2], [13, 6]] },
                     
                     // Opposite chirality
@@ -217,7 +217,7 @@
                     // Same chirality
                     2: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 10], [3, 9], [12, 3], [12, 7], [12, 9]] },
                     6: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 10], [2, 9], [12, 3], [12, 7], [12, 9]] },
-                    8: { reversed: true, flipped: false, blocks: [[0, 5], [12, 3], [12, 7], [12, 9]] },
+                    8: { reversed: true, flipped: false, blocks: [[0, 5], [1, 4], [12, 3], [12, 7], [12, 9]] },
                     
                     // Opposite chirality
                     3: { reversed: false, flipped: true, blocks: [[10, 0], [10, 4], [11, 1], [11, 5], [12, 2], [12, 6], [12, 8]] },
@@ -342,7 +342,15 @@
 
                 console.log(`\nTrying: Root edge ${rootEdge}, Source edge ${sourceEdgeNum}, Color: ${desiredColor === Tile.DARK_BLUE ? 'DARK_BLUE' : 'LIGHT_BLUE'}, flippedParam: ${flippedParam}`);
 
+                console.log(`\nTrying: Root edge ${rootEdge}, Source edge ${sourceEdgeNum}, Color: ${desiredColor === Tile.DARK_BLUE ? 'DARK_BLUE' : 'LIGHT_BLUE'}, flippedParam: ${flippedParam}`);
+
                 const reversedSource = sameChirality;
+
+                // CHECK CONSTRAINTS FIRST
+                if (!this.canPlaceWithConstraints(tile, rootEdge, sourceEdgeNum, reversedSource, flippedParam)) {
+                    console.log('  ❌ Blocked by edge constraints');
+                    continue;
+                }
 
                 const sourceEdge = reversedSource
                     ? [(sourceEdgeNum + 1) % 14, sourceEdgeNum]
@@ -351,7 +359,10 @@
                 const targetEdge = [rootEdge, (rootEdge + 1) % 14];
                 const neighbor = Tile.createAttached(sourceEdge, tile, targetEdge, {flipped: flippedParam, color: desiredColor});
 
-                if (!neighbor || !neighbor.transform) continue;
+                if (!neighbor || !neighbor.transform) {
+                    console.log('  ❌ Failed to create tile');
+                    continue;
+                }
 
                 // Check actual chirality
                 const det = neighbor.transform.values[0] * neighbor.transform.values[4] - 
@@ -359,22 +370,27 @@
                 const actuallyFlipped = det < 0;
 
                 if (actuallyFlipped !== desiredFlipped) {
-                    continue; // Wrong chirality
+                    console.log(`  ❌ Wrong chirality (wanted ${desiredFlipped}, got ${actuallyFlipped})`);
+                    continue;
                 }
 
                 neighbor.color = desiredColor;
 
                 // Check for geometric conflict
                 if (this.hasGeometricConflict(neighbor, tiling.tiles, tile)) {
+                    console.log(`  ❌ Geometric overlap`);
                     continue;
                 }
 
                 // No conflict - place the tile
+                console.log(`  ✅ SUCCESS! Placed tile`);
                 tile.occupiedEdges.push({rootEdge, sourceEdge: sourceEdgeNum, reversed: reversedSource, flipped: flippedParam});
                 neighbor.occupiedEdges = [{rootEdge: sourceEdgeNum, sourceEdge: rootEdge, reversed: reversedSource, flipped: flippedParam}];
                 tiling.tiles.push(neighbor);
                 return;
             }
+
+            console.log('\n⚠️ Could not place neighbor - all possible placements cause overlaps');
         
         }
         
