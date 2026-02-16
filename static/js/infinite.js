@@ -42,8 +42,10 @@ class InfiniteExplorer {
         
         let rootTransform;
         if (rootColor === Tile.DARK_BLUE) {
+            // Dark blue (flipped) - no flip transform
             rootTransform = translation.multiply(rotation).multiply(scaling);
         } else {
+            // Light blue (unflipped) - apply flip transform
             const flip = Matrix.flipX();
             rootTransform = translation.multiply(rotation).multiply(flip).multiply(scaling);
         }
@@ -52,20 +54,27 @@ class InfiniteExplorer {
         
         // Place tiles one at a time
         for (let i = 0; i < 2; i++) {
-            // Find tiles that still have free edges
-            const tilesWithFreeEdges = tiling.tiles.filter(tile => {
-                const occupiedCount = tile.occupiedEdges ? tile.occupiedEdges.length : 0;
-                return occupiedCount < 14; // Hat tile has 14 edges
-            });
+            // First, try to use the root tile
+            let parentTile = tiling.tiles[0]; // Always start with root
             
-            if (tilesWithFreeEdges.length === 0) {
-                console.log('No tiles with free edges available');
-                break;
+            // If root is full (all 14 edges occupied), then look for other tiles
+            const rootOccupiedCount = parentTile.occupiedEdges ? parentTile.occupiedEdges.length : 0;
+            if (rootOccupiedCount >= 14) {
+                // Root is full, find other tiles with free edges
+                const tilesWithFreeEdges = tiling.tiles.filter(tile => {
+                    const occupiedCount = tile.occupiedEdges ? tile.occupiedEdges.length : 0;
+                    return occupiedCount < 14;
+                });
+                
+                if (tilesWithFreeEdges.length === 0) {
+                    console.log('No tiles with free edges available');
+                    break;
+                }
+                
+                // Pick a random tile from those with free edges
+                const randomTileIndex = Math.floor(this.seededRandom() * tilesWithFreeEdges.length);
+                parentTile = tilesWithFreeEdges[randomTileIndex];
             }
-            
-            // Pick a random tile from those with free edges
-            const randomTileIndex = Math.floor(this.seededRandom() * tilesWithFreeEdges.length);
-            const parentTile = tilesWithFreeEdges[randomTileIndex];
             
             const actualIndex = tiling.tiles.indexOf(parentTile);
             console.log(`Parent tile ${actualIndex}: color = ${parentTile.color === Tile.DARK_BLUE ? 'DARK_BLUE' : 'LIGHT_BLUE'}`);
@@ -126,27 +135,28 @@ class InfiniteExplorer {
                 13: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [7, 8], [7, 12], [8, 7], [8, 9]] }
             },
             7: {
-                8: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 13], [8, 3], [8, 7], [8, 9], [9, 6], [9, 12]] },
+                8: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 13], [8, 3], [8, 7], [8, 9], [8, 13], [9, 6], [9, 12]] },
                 12: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 3], [6, 9], [6, 13], [8, 7], [8, 9]] }
             },
             8: {
                 3: {reversed: true, flipped: false, blocks: [[7, 8], [9, 12], [10, 5]] },
                 7: { reversed: true, flipped: false, blocks: [[5, 0], [6, 13], [7, 8], [7, 12], [9, 6], [10, 5]] },
                 9: { reversed: true, flipped: false, blocks: [[5, 0], [5, 4], [5, 10], [6, 3], [6, 9], [6, 13], [7, 8], [7, 12]] },
+                13: { reversed: true, flipped: false, blocks: [[7, 8], [9, 2], [9, 6], [9, 8], [9, 12], [10, 1], [10, 5], [11, 0], [11, 4]] }
             },
             9: {
-                2: {reversed: true, flipped: false, blocks: [[10, 1], [10, 5], [11, 0], [11, 4]] },
-                6: { reversed: true, flipped: false, blocks: [[7, 8], [8, 7], [10, 1], [10, 5], [11, 0], [11, 4]] },
-                8: { reversed: true, flipped: false, blocks: [[10, 1], [10, 5], [11, 0], [11, 4], [12, 3], [12, 7]] },
-                12: {reversed: true, flipped: false, blocks: [[7, 8], [8, 3], [8, 7], [8, 9], [10, 5], [11, 4]] }
+                2: {reversed: true, flipped: false, blocks: [[8, 13], [10, 1], [10, 5], [11, 0], [11, 4]] },
+                6: { reversed: true, flipped: false, blocks: [[7, 8], [8, 7], [8, 13], [10, 1], [10, 5], [11, 0], [11, 4]] },
+                8: { reversed: true, flipped: false, blocks: [[8, 13], [10, 1], [10, 5], [11, 0], [11, 4], [12, 3], [12, 7]] },
+                12: {reversed: true, flipped: false, blocks: [[7, 8], [8, 3], [8, 7], [8, 9], [8, 13], [10, 5], [11, 4]] }
             },
             10: {
-                1: { reversed: true, flipped: false, blocks: [[9, 6], [9, 8], [11, 0], [11, 4]] },
-                5: {reversed: true, flipped: false, blocks: [[8, 3], [8, 7], [9, 2], [9, 6], [9, 8], [9, 12], [11, 0], [11, 4]] }
+                1: { reversed: true, flipped: false, blocks: [[8, 13], [9, 6], [9, 8], [11, 0], [11, 4]] },
+                5: {reversed: true, flipped: false, blocks: [[8, 3], [8, 7], [8, 13], [9, 2], [9, 6], [9, 8], [9, 12], [11, 0], [11, 4]] }
             },
             11: {
-                0: { reversed: true, flipped: false, blocks: [[9, 2], [9, 6], [9, 8], [10, 1], [10, 5]] },
-                4: { reversed: true, flipped: false, blocks: [[9, 2], [9, 6], [9, 8], [9, 12], [10, 1], [10, 5]] }
+                0: { reversed: true, flipped: false, blocks: [[8, 13], [9, 2], [9, 6], [9, 8], [10, 1], [10, 5]] },
+                4: { reversed: true, flipped: false, blocks: [[8, 13], [9, 2], [9, 6], [9, 8], [9, 12], [10, 1], [10, 5]] }
             },
             12: {
                 3: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 10], [2, 9], [13, 2], [13, 6], [13, 8]] },
@@ -182,10 +192,10 @@ class InfiniteExplorer {
             if (rootConstraints1) {
                 const sourceConstraints1 = rootConstraints1[occupiedSourceEdge];
                 if (sourceConstraints1) {
-                    console.log(`    Found constraints for occupied edge. Rev match: ${sourceConstraints1.reversed === occupiedReversed}, Flip match: ${sourceConstraints1.flipped === occupiedFlipped}`);
+                    console.log(`    Found constraints for occupied edge. Rev match: ${sourceConstraints1.reversed === occupiedReversed}, Flip match: ${sourceConstraints1.flipped === false && occupiedFlipped === true}`);
                     
                     if (sourceConstraints1.reversed === occupiedReversed && 
-                        sourceConstraints1.flipped === occupiedFlipped) {
+                        sourceConstraints1.flipped === false && occupiedFlipped === true) {
                         
                         console.log(`    Blocks:`, sourceConstraints1.blocks);
                         
@@ -204,10 +214,10 @@ class InfiniteExplorer {
             if (rootConstraints2) {
                 const sourceConstraints2 = rootConstraints2[sourceEdge];
                 if (sourceConstraints2) {
-                    console.log(`    Found constraints for new edge. Rev match: ${sourceConstraints2.reversed === reversed}, Flip match: ${sourceConstraints2.flipped === flipped}`);
+                    console.log(`    Found constraints for new edge. Rev match: ${sourceConstraints2.reversed === reversed}, Flip match: ${sourceConstraints2.flipped === false && flipped === true}`);
                     
                     if (sourceConstraints2.reversed === reversed && 
-                        sourceConstraints2.flipped === flipped) {
+                        sourceConstraints2.flipped === false && flipped === true) {
                         
                         console.log(`    Blocks:`, sourceConstraints2.blocks);
                         
@@ -227,17 +237,17 @@ class InfiniteExplorer {
     }
     
     placeRandomNeighbor(tiling, tile) {
-        const parentIsFlipped = (tile.color === Tile.LIGHT_BLUE);
-                
+        const parentIsFlipped = (tile.color === Tile.DARK_BLUE);  // ← DARK_BLUE is now "flipped"
+                        
         const unflippedToFlipped = {
             0: [10], 1: [11], 2: [12], 3: [13], 4: [10], 5: [11], 6: [12],
             7: [13], 8: [12], 9: [13], 10: [0, 4], 11: [1, 5], 12: [2, 6, 8], 13: [3, 7, 9]
         };
         
         const unflippedToUnflipped = {
-            0: [5, 11], 1: [0, 4, 10], 2: [3, 9, 13], 3: [2, 6, 12], 4: [1, 11],
-            5: [0, 4, 10], 6: [3, 13], 7: [8, 12], 8: [3, 7, 9, 13], 9: [6, 8],
-            10: [1], 11: [0], 12: [3, 7], 13: [2, 6, 8]
+            0: [5, 11], 1: [0, 4, 10], 2: [3, 9, 13], 3: [2, 6, 8, 12], 4: [1, 5, 11],
+            5: [0, 4, 10], 6: [3, 9, 13], 7: [8, 12], 8: [3, 7, 9, 13], 9: [2, 6, 8, 12],
+            10: [1, 5], 11: [0, 4], 12: [3, 7, 9], 13: [2, 6, 8]
         };
         
         const flippedToUnflipped = {
@@ -247,7 +257,7 @@ class InfiniteExplorer {
         
         const flippedToFlipped = {
             0: [5, 11], 1: [0, 4, 10], 2: [3, 9, 13], 3: [2, 6, 8, 12], 4: [1, 5, 11],
-            5: [0, 4, 10], 6: [3, 9, 13], 7: [8, 12], 8: [3, 7, 9], 9: [2, 6, 8, 12],
+            5: [0, 4, 10], 6: [3, 9, 13], 7: [8, 12], 8: [3, 7, 9, 13], 9: [2, 6, 8, 12],
             10: [1, 5], 11: [0, 4], 12: [3, 7, 9], 13: [2, 6, 8]
         };
         
@@ -268,10 +278,10 @@ class InfiniteExplorer {
             
             let neighborColor, sourceEdgeNum, reversedSource, reversedTarget, targetEdge, flipped;
             
-            if (!parentIsFlipped) {  // Parent is DARK_BLUE (unflipped)
+            if (!parentIsFlipped) {  // Parent is LIGHT_BLUE (calling it "unflipped")
                 if (this.seededRandom() < 0.5) {
                     // CASE 1: Unflipped → Flipped
-                    neighborColor = Tile.LIGHT_BLUE;
+                    neighborColor = Tile.DARK_BLUE;  // ← Swapped
                     const validSources = unflippedToFlipped[randomEdge];
                     if (!validSources || validSources.length === 0) continue;
                     sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
@@ -281,19 +291,19 @@ class InfiniteExplorer {
                     flipped = true;
                 } else {
                     // CASE 2: Unflipped → Unflipped (SAME CHIRALITY)
-                    neighborColor = Tile.DARK_BLUE;
+                    neighborColor = Tile.LIGHT_BLUE;
                     const validSources = unflippedToUnflipped[randomEdge];
                     if (!validSources || validSources.length === 0) continue;
                     sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
                     reversedSource = true;
                     reversedTarget = false;
                     targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = false;
+                    flipped = true;  // ← Change from false to true
                 }
-            } else {  // Parent is LIGHT_BLUE (flipped)
+            } else {  // Parent is DARK_BLUE (calling it "flipped")
                 if (this.seededRandom() < 0.5) {
                     // CASE 3: Flipped → Unflipped
-                    neighborColor = Tile.DARK_BLUE;
+                    neighborColor = Tile.LIGHT_BLUE;  // ← Swapped
                     const validSources = flippedToUnflipped[randomEdge];
                     if (!validSources || validSources.length === 0) continue;
                     sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
@@ -303,14 +313,14 @@ class InfiniteExplorer {
                     flipped = false;
                 } else {
                     // CASE 4: Flipped → Flipped (SAME CHIRALITY)
-                    neighborColor = Tile.LIGHT_BLUE;
+                    neighborColor = Tile.DARK_BLUE;
                     const validSources = flippedToFlipped[randomEdge];
                     if (!validSources || validSources.length === 0) continue;
                     sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
                     reversedSource = true;
                     reversedTarget = false;
                     targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = false;
+                    flipped = true;  // ← Change from false to true
                 }
             }
             // ... determine neighbor placement ...

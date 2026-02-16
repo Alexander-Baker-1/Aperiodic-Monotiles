@@ -34,6 +34,27 @@ class ConstraintTester {
         title.style.marginTop = '0';
         container.appendChild(title);
         
+        // Root tile color selector
+        const rootColorLabel = document.createElement('label');
+        rootColorLabel.textContent = 'Root tile color: ';
+        container.appendChild(rootColorLabel);
+        
+        this.rootColorSelect = document.createElement('select');
+        const rootColors = [
+            { name: 'Light Blue (Unflipped)', value: 'unflipped' },
+            { name: 'Dark Blue (Flipped)', value: 'flipped' }
+        ];
+        for (let c of rootColors) {
+            const option = document.createElement('option');
+            option.value = c.value;
+            option.textContent = c.name;
+            this.rootColorSelect.appendChild(option);
+        }
+        this.rootColorSelect.addEventListener('change', () => this.generate());
+        container.appendChild(this.rootColorSelect);
+        container.appendChild(document.createElement('br'));
+        container.appendChild(document.createElement('br'));
+        
         // Root edge selector
         const rootEdgeLabel = document.createElement('label');
         rootEdgeLabel.textContent = 'Root tile edge: ';
@@ -79,9 +100,9 @@ class ConstraintTester {
         
         // Color selector
         const colorLabel = document.createElement('label');
-        colorLabel.textContent = 'Color: ';
+        colorLabel.textContent = 'Neighbor color: ';
         container.appendChild(colorLabel);
-
+    
         this.colorSelect = document.createElement('select');
         const colors = [
             { name: 'Light Blue (Unflipped)', value: 'unflipped' },
@@ -97,7 +118,7 @@ class ConstraintTester {
         // Auto-update reverse checkbox based on color
         this.colorSelect.addEventListener('change', () => {
             const isFlipped = this.colorSelect.value === 'flipped';
-            const rootIsFlipped = this.rootTile.color === Tile.DARK_BLUE;
+            const rootIsFlipped = this.rootColorSelect.value === 'flipped';
             
             // Unflipped→Unflipped or Flipped→Flipped = reversed
             if (isFlipped === rootIsFlipped) {
@@ -162,6 +183,49 @@ class ConstraintTester {
         container.appendChild(this.logDiv);
         
         document.body.appendChild(container);
+    }
+    
+    generate() {
+        const tiling = new TilingSystem(this.geometry);
+        
+        const scaling = Matrix.scale(30);
+        const translation = Matrix.translation(400, 300);
+        
+        // Determine root color from selector
+        const rootIsFlipped = this.rootColorSelect.value === 'flipped';
+        const rootColor = rootIsFlipped ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
+        
+        // Apply flip transform if root is unflipped (light blue)
+        // In your system: LIGHT_BLUE = unflipped (needs flip in transform), DARK_BLUE = flipped (no flip)
+        let baseTransform;
+        if (rootIsFlipped) {
+            // Dark blue (flipped) - no flip transform needed
+            baseTransform = translation.multiply(scaling);
+        } else {
+            // Light blue (unflipped) - needs flip transform
+            const flip = Matrix.flipX();
+            baseTransform = translation.multiply(flip).multiply(scaling);
+        }
+        
+        this.rootTile = tiling.addRootTile(baseTransform, rootColor);
+        this.rootTile.occupiedEdges = new Set();
+        
+        // Re-add locked neighbors first
+        for (let neighbor of this.lockedNeighbors) {
+            tiling.tiles.push(neighbor);
+            // Re-mark their edges as occupied
+            for (let edge of neighbor.rootEdge) {
+                this.rootTile.occupiedEdges.add(edge);
+            }
+        }
+        
+        // Then add unlocked neighbors
+        for (let neighbor of this.neighbors) {
+            tiling.tiles.push(neighbor);
+        }
+        
+        this.updateStatus();
+        this.draw(tiling);
     }
     
     placeNeighbor() {
@@ -258,35 +322,6 @@ class ConstraintTester {
         this.lockedNeighbors = [];
         this.rootTile.occupiedEdges.clear();
         this.generate();
-    }
-    
-    generate() {
-        const tiling = new TilingSystem(this.geometry);
-        
-        const scaling = Matrix.scale(30);
-        const translation = Matrix.translation(400, 300);
-        const flip = Matrix.flipX();
-        const baseTransform = translation.multiply(flip).multiply(scaling);
-        
-        this.rootTile = tiling.addRootTile(baseTransform, Tile.LIGHT_BLUE);
-        this.rootTile.occupiedEdges = new Set();
-        
-        // Re-add locked neighbors first
-        for (let neighbor of this.lockedNeighbors) {
-            tiling.tiles.push(neighbor);
-            // Re-mark their edges as occupied
-            for (let edge of neighbor.rootEdge) {
-                this.rootTile.occupiedEdges.add(edge);
-            }
-        }
-        
-        // Then add unlocked neighbors
-        for (let neighbor of this.neighbors) {
-            tiling.tiles.push(neighbor);
-        }
-        
-        this.updateStatus();
-        this.draw(tiling);
     }
     
     updateStatus() {
