@@ -26,5 +26,9 @@ def substitution():
 def chains():
     return render_template('chains.html')
 
+@app.route('/constraint-tester')
+def constraint_tester():
+    return render_template('constraint-tester.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
