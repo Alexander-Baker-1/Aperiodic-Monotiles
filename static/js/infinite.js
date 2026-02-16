@@ -42,13 +42,14 @@ class InfiniteExplorer {
         
         let rootTransform;
         if (rootColor === Tile.DARK_BLUE) {
-            // Dark blue (flipped) - no flip transform
+            // Dark blue = flipped? → NO flip applied
             rootTransform = translation.multiply(rotation).multiply(scaling);
         } else {
-            // Light blue (unflipped) - apply flip transform
+            // Light blue = unflipped? → apply flip
             const flip = Matrix.flipX();
             rootTransform = translation.multiply(rotation).multiply(flip).multiply(scaling);
         }
+       
         
         const rootTile = tiling.addRootTile(rootTransform, rootColor);
         
@@ -97,76 +98,136 @@ class InfiniteExplorer {
     
     buildEdgeConstraints() {
         return {
-            // Root edge 0, Unflipped->Unflipped
             0: {
+                // Same chirality (flipped: false)
                 5: { reversed: true, flipped: false, blocks: [[1, 10], [2, 9], [12, 3], [12, 7], [12, 9], [13, 2], [13, 6], [13, 8]] },
-                11: { reversed: true, flipped: false, blocks: [[1, 0], [1, 4], [1, 10], [2, 3], [2, 9], [2, 13], [3, 12], [12, 3], [12, 7], [13, 2], [13, 6]] }
+                11: { reversed: true, flipped: false, blocks: [[1, 0], [1, 4], [1, 10], [2, 3], [2, 9], [2, 13], [3, 12], [12, 3], [12, 7], [13, 2], [13, 6]] },
+                
+                // Opposite chirality (flipped: true)
+                10: { reversed: false, flipped: true, blocks: [[1, 11], [2, 12], [3, 13]] }
             },
-            // Root edge 1, Unflipped->Unflipped
             1: {
+                // Same chirality
                 0: { reversed: true, flipped: false, blocks: [[0, 11], [2, 3], [2, 9], [2, 13], [3, 2], [3, 6], [3, 8], [3, 12], [4, 1]] },
                 4: { reversed: true, flipped: false, blocks: [[0, 11], [2, 3], [2, 9], [2, 13], [3, 6], [3, 12]] },
-                10: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [2, 3], [2, 9], [2, 13], [3, 12], [12, 3], [12, 7], [13, 2], [13, 6]] }
+                10: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [2, 3], [2, 9], [2, 13], [3, 12], [12, 3], [12, 7], [13, 2], [13, 6]] },
+                
+                // Opposite chirality
+                11: { reversed: false, flipped: true, blocks: [[0, 10], [2, 12], [13, 3]] }
             },
             2: {
+                // Same chirality
                 3: { reversed: true, flipped: false, blocks: [[0, 11], [1, 0], [1, 4], [1, 10], [3, 6], [3, 12]] },
                 9: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 0], [1, 4], [1, 10], [3, 12], [12, 3], [12, 7], [13, 2], [13, 6]] },
-                13: { reversed: true, flipped: false, blocks: [[0, 11], [1, 0], [1, 4], [1, 10], [3, 2], [3, 6], [3, 8], [3, 12], [4, 1], [4, 5]] }
+                13: { reversed: true, flipped: false, blocks: [[0, 11], [1, 0], [1, 4], [1, 10], [3, 2], [3, 6], [3, 8], [3, 12], [4, 1], [4, 5]] },
+                
+                // Opposite chirality
+                12: { reversed: false, flipped: true, blocks: [[0, 10], [1, 11], [3, 13]] }
             },
             3: {
+                // Same chirality
                 2: { reversed: true, flipped: false, blocks: [[1, 0], [2, 13], [4, 1], [4, 5], [4, 11], [5, 10], [6, 9]] },
                 6: { reversed: true, flipped: false, blocks: [[1, 0], [1, 4], [1, 10], [2, 3], [2, 13], [4, 1], [4, 5], [4, 11], [5, 10], [6, 9]] },
                 8: { reversed: true, flipped: false, blocks: [[1, 0], [2, 13], [4, 1], [4, 5]] },
-                12: { reversed: true, flipped: false, blocks: [[0, 11], [1, 0], [1, 4], [1, 10], [2, 3], [2, 9], [2, 13], [4, 1], [4, 5]] }
+                12: { reversed: true, flipped: false, blocks: [[0, 11], [1, 0], [1, 4], [1, 10], [2, 3], [2, 9], [2, 13], [4, 1], [4, 5]] },
+                
+                // Opposite chirality
+                13: { reversed: false, flipped: true, blocks: [[0, 10], [1, 11], [2, 12]] }
             },
             4: {
+                // Same chirality
                 1: { reversed: true, flipped: false, blocks: [[1, 0], [2, 13], [3, 2], [3, 8], [5, 10], [6, 9]] },
                 5: { reversed: true, flipped: false, blocks: [[1, 0], [1, 4], [2, 3], [2, 13], [3, 2], [3, 6], [3, 8], [3, 12], [5, 10], [6, 9]] },
-                11: { reversed: true, flipped: false, blocks: [[3, 2], [3, 6], [3, 9], [5, 0], [5, 4], [5, 10], [6, 3], [6, 9], [6, 13], [7, 12]] }
+                11: { reversed: true, flipped: false, blocks: [[3, 2], [3, 6], [3, 9], [5, 0], [5, 4], [5, 10], [6, 3], [6, 9], [6, 13], [7, 12]] },
+                
+                // Opposite chirality
+                10: { reversed: false, flipped: true, blocks: [[5, 11], [6, 12], [7, 13]] }
             },
             5: {
+                // Same chirality
                 0: { reversed: true, flipped: false, blocks: [[4, 11], [6, 3], [6, 9], [6, 13], [7, 8], [7, 12], [8, 7], [8, 9]] },
                 4: { reversed: true, flipped: false, blocks: [[4, 11], [6, 3], [6, 9], [6, 13], [7, 12], [8, 9]] },
-                10: { reversed: true, flipped: false, blocks: [[3, 2], [3, 6], [3, 12], [4, 1], [4, 5], [4, 11], [6, 3], [6, 9], [6, 13], [7, 12]] }
+                10: { reversed: true, flipped: false, blocks: [[3, 2], [3, 6], [3, 12], [4, 1], [4, 5], [4, 11], [6, 3], [6, 9], [6, 13], [7, 8], [7, 12]] },
+                
+                // Opposite chirality
+                11: { reversed: false, flipped: true, blocks: [[4, 10], [6, 12], [7, 13]] }
             },
             6: {
+                // Same chirality
                 3: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [7, 12], [8, 9]] },
                 9: { reversed: true, flipped: false, blocks: [[3, 2], [3, 6], [4, 1], [4, 5], [4, 11], [5, 0], [5, 4], [5, 10], [7, 12]] },
-                13: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [7, 8], [7, 12], [8, 7], [8, 9]] }
+                13: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [7, 8], [7, 12], [8, 7], [8, 9]] },
+                
+                // Opposite chirality
+                12: { reversed: false, flipped: true, blocks: [[4, 10], [5, 11], [7, 13]] }
             },
             7: {
+                // Same chirality
                 8: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 13], [8, 3], [8, 7], [8, 9], [8, 13], [9, 6], [9, 12], [10, 5]] },
-                12: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 3], [6, 9], [6, 13], [8, 7], [8, 9]] }
+                12: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 3], [6, 9], [6, 13], [8, 7], [8, 9]] },
+                
+                // Opposite chirality
+                13: { reversed: false, flipped: true, blocks: [[4, 10], [5, 11], [6, 12]] }
             },
             8: {
-                3: {reversed: true, flipped: false, blocks: [[7, 8], [9, 12], [10, 5]] },
+                // Same chirality
+                3: { reversed: true, flipped: false, blocks: [[7, 8], [9, 12], [10, 5]] },
                 7: { reversed: true, flipped: false, blocks: [[5, 0], [6, 13], [7, 8], [7, 12], [9, 6], [10, 5]] },
                 9: { reversed: true, flipped: false, blocks: [[5, 0], [5, 4], [5, 10], [6, 3], [6, 9], [6, 13], [7, 8], [7, 12]] },
-                13: { reversed: true, flipped: false, blocks: [[7, 8], [9, 2], [9, 6], [9, 8], [9, 12], [10, 1], [10, 5], [11, 0], [11, 4]] }
+                13: { reversed: true, flipped: false, blocks: [[7, 8], [9, 2], [9, 6], [9, 8], [9, 12], [10, 1], [10, 5], [11, 0], [11, 4]] },
+                
+                // Opposite chirality
+                12: { reversed: false, flipped: true, blocks: [[9, 13], [10, 0], [11, 1]] }
             },
             9: {
-                2: {reversed: true, flipped: false, blocks: [[8, 13], [10, 1], [10, 5], [11, 0], [11, 4]] },
+                // Same chirality
+                2: { reversed: true, flipped: false, blocks: [[8, 13], [10, 1], [10, 5], [11, 0], [11, 4]] },
                 6: { reversed: true, flipped: false, blocks: [[7, 8], [8, 7], [8, 13], [10, 1], [10, 5], [11, 0], [11, 4]] },
                 8: { reversed: true, flipped: false, blocks: [[8, 13], [10, 1], [10, 5], [11, 0], [11, 4], [12, 3], [12, 7]] },
-                12: {reversed: true, flipped: false, blocks: [[7, 8], [8, 3], [8, 7], [8, 9], [8, 13], [10, 5], [11, 4]] }
+                12: { reversed: true, flipped: false, blocks: [[7, 8], [8, 3], [8, 7], [8, 9], [8, 13], [10, 5], [11, 4]] },
+                
+                // Opposite chirality
+                13: { reversed: false, flipped: true, blocks: [[8, 12], [10, 0], [11, 1]] }
             },
             10: {
+                // Same chirality
                 1: { reversed: true, flipped: false, blocks: [[8, 13], [9, 6], [9, 8], [11, 0], [11, 4]] },
-                5: {reversed: true, flipped: false, blocks: [[7, 8], [8, 3], [8, 7], [8, 13], [9, 2], [9, 6], [9, 8], [9, 12], [11, 0], [11, 4]] }
+                5: { reversed: true, flipped: false, blocks: [[7, 8], [8, 3], [8, 7], [8, 13], [9, 2], [9, 6], [9, 8], [9, 12], [11, 0], [11, 4]] },
+                
+                // Opposite chirality
+                0: { reversed: false, flipped: true, blocks: [[9, 13], [11, 1], [11, 5], [12, 2], [12, 6], [12, 8], [13, 3], [13, 7], [13, 9]] },
+                4: { reversed: false, flipped: true, blocks: [[11, 1], [11, 5], [12, 2], [12, 6], [12, 8], [13, 3], [13, 7], [13, 9]] }
             },
             11: {
+                // Same chirality
                 0: { reversed: true, flipped: false, blocks: [[8, 13], [9, 2], [9, 6], [9, 8], [10, 1], [10, 5]] },
-                4: { reversed: true, flipped: false, blocks: [[8, 13], [9, 2], [9, 6], [9, 8], [9, 12], [10, 1], [10, 5]] }
+                4: { reversed: true, flipped: false, blocks: [[8, 13], [9, 2], [9, 6], [9, 8], [9, 12], [10, 1], [10, 5]] },
+                
+                // Opposite chirality
+                1: { reversed: false, flipped: true, blocks: [[8, 12], [9, 13], [10, 0], [10, 4], [12, 2], [12, 6], [12, 8], [13, 3], [13, 7], [13, 9]] },
+                5: { reversed: false, flipped: true, blocks: [[10, 0], [10, 4], [12, 2], [12, 6], [12, 8], [13, 3], [13, 7], [13, 9]] }
             },
             12: {
+                // Same chirality
                 3: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 10], [2, 9], [13, 2], [13, 6], [13, 8]] },
                 7: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 10], [2, 9], [13, 2], [13, 6], [13, 8]] },
-                9: { reversed: true, flipped: false, blocks: [[0, 5], [13, 2], [13, 6], [13, 8]] }
+                9: { reversed: true, flipped: false, blocks: [[0, 5], [13, 2], [13, 6], [13, 8]] },
+                
+                // Opposite chirality
+                2: { reversed: false, flipped: true, blocks: [[9, 13], [10, 0], [10, 4], [11, 1], [11, 5], [13, 3], [13, 7], [13, 8]] },
+                6: { reversed: false, flipped: true, blocks: [[10, 0], [10, 4], [11, 1], [11, 5], [13, 3], [13, 7], [13, 9]] },
+                8: { reversed: false, flipped: true, blocks: [[10, 0], [10, 4], [11, 1], [11, 5], [13, 3], [13, 7], [13, 9]] }
             },
             13: {
+                // Same chirality
                 2: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 10], [3, 9], [12, 3], [12, 7], [12, 9]] },
                 6: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 10], [2, 9], [12, 3], [12, 7], [12, 9]] },
-                8: { reversed: true, flipped: false, blocks: [[0, 5], [12, 3], [12, 7], [12, 9]] }
+                8: { reversed: true, flipped: false, blocks: [[0, 5], [12, 3], [12, 7], [12, 9]] },
+                
+                // Opposite chirality
+                3: { reversed: false, flipped: true, blocks: [[10, 0], [10, 4], [11, 1], [11, 5], [12, 2], [12, 6], [12, 8]] },
+                7: { reversed: false, flipped: true, blocks: [[10, 0], [10, 4], [11, 1], [11, 5], [12, 2], [12, 6], [12, 8]] },
+                9: { reversed: false, flipped: true, blocks: [[11, 1], [11, 5], [12, 2], [12, 6], [12, 8]] }
             }
         };
     }
@@ -192,11 +253,11 @@ class InfiniteExplorer {
             if (rootConstraints1) {
                 const sourceConstraints1 = rootConstraints1[occupiedSourceEdge];
                 if (sourceConstraints1) {
-                    // Match when constraint data has flipped:false and placement uses flipped:false OR flipped:true
-                    const flipMatch = sourceConstraints1.flipped === false && (occupiedFlipped === false || occupiedFlipped === true);
-                    console.log(`    Found constraints for occupied edge. Rev match: ${sourceConstraints1.reversed === occupiedReversed}, Flip match: ${flipMatch}`);
+                    console.log(`    Found constraints for occupied edge. Rev match: ${sourceConstraints1.reversed === occupiedReversed}, Flip match: ${sourceConstraints1.flipped === occupiedFlipped}`);
                     
-                    if (sourceConstraints1.reversed === occupiedReversed && flipMatch) {
+                    if (sourceConstraints1.reversed === occupiedReversed && 
+                        sourceConstraints1.flipped === occupiedFlipped) {
+                        
                         console.log(`    Blocks:`, sourceConstraints1.blocks);
                         
                         for (let [blockedRoot, blockedSource] of sourceConstraints1.blocks) {
@@ -214,10 +275,11 @@ class InfiniteExplorer {
             if (rootConstraints2) {
                 const sourceConstraints2 = rootConstraints2[sourceEdge];
                 if (sourceConstraints2) {
-                    const flipMatch = sourceConstraints2.flipped === false && (flipped === false || flipped === true);
-                    console.log(`    Found constraints for new edge. Rev match: ${sourceConstraints2.reversed === reversed}, Flip match: ${flipMatch}`);
+                    console.log(`    Found constraints for new edge. Rev match: ${sourceConstraints2.reversed === reversed}, Flip match: ${sourceConstraints2.flipped === flipped}`);
                     
-                    if (sourceConstraints2.reversed === reversed && flipMatch) {
+                    if (sourceConstraints2.reversed === reversed && 
+                        sourceConstraints2.flipped === flipped) {
+                        
                         console.log(`    Blocks:`, sourceConstraints2.blocks);
                         
                         for (let [blockedRoot, blockedSource] of sourceConstraints2.blocks) {
@@ -236,141 +298,60 @@ class InfiniteExplorer {
     }
     
     placeRandomNeighbor(tiling, tile) {
-        const parentIsFlipped = (tile.color === Tile.DARK_BLUE);  // ← DARK_BLUE is now "flipped"
-                        
-        const unflippedToFlipped = {
-            0: [10], 1: [11], 2: [12], 3: [13], 4: [10], 5: [11], 6: [12],
-            7: [13], 8: [12], 9: [13], 10: [0, 4], 11: [1, 5], 12: [2, 6, 8], 13: [3, 7, 9]
+        const parentIsFlipped = (tile.color === Tile.DARK_BLUE); // DARK_BLUE = flipped
+    
+        // Define edge mappings
+        const unflippedToUnflipped = {0:[5,11],1:[0,4,10],2:[3,9,13],3:[2,6,8,12],4:[1,5,11],
+            5:[0,4,10],6:[3,9,13],7:[8,12],8:[3,7,9,13],9:[2,6,8,12],10:[1,5],11:[0,4],12:[3,7,9],13:[2,6,8]};
+        const unflippedToFlipped   = {0:[10],1:[11],2:[12],3:[13],4:[10],5:[11],6:[12],7:[13],8:[12],9:[13],10:[0,4],11:[1,5],12:[2,6,8],13:[3,7,9]};
+        const flippedToUnflipped   = {0:[10],1:[11],2:[12],3:[13],4:[10],5:[11],6:[12],7:[13],8:[12],9:[13],10:[0,4],11:[1,5],12:[2,6,8],13:[3,7,9]};
+        const flippedToFlipped     = {0:[5,11],1:[0,4,10],2:[3,9,13],3:[2,6,8,12],4:[1,5,11],
+            5:[0,4,10],6:[3,9,13],7:[8,12],8:[3,7,9,13],9:[2,6,8,12],10:[1,5],11:[0,4],12:[3,7,9],13:[2,6,8]};
+    
+        const neighborEdges = {
+            false: { false: unflippedToUnflipped, true: unflippedToFlipped },
+            true:  { false: flippedToUnflipped,     true: flippedToFlipped   }
         };
-        
-        const unflippedToUnflipped = {
-            0: [5, 11], 1: [0, 4, 10], 2: [3, 9, 13], 3: [2, 6, 8, 12], 4: [1, 5, 11],
-            5: [0, 4, 10], 6: [3, 9, 13], 7: [8, 12], 8: [3, 7, 9, 13], 9: [2, 6, 8, 12],
-            10: [1, 5], 11: [0, 4], 12: [3, 7, 9], 13: [2, 6, 8]
-        };
-        
-        const flippedToUnflipped = {
-            0: [10], 1: [11], 2: [12], 3: [13], 4: [10], 5: [11], 6: [12],
-            7: [13], 8: [12], 9: [13], 10: [0, 4], 11: [1, 5], 12: [2, 6, 8], 13: [3, 7, 9]
-        };
-        
-        const flippedToFlipped = {
-            0: [5, 11], 1: [0, 4, 10], 2: [3, 9, 13], 3: [2, 6, 8, 12], 4: [1, 5, 11],
-            5: [0, 4, 10], 6: [3, 9, 13], 7: [8, 12], 8: [3, 7, 9, 13], 9: [2, 6, 8, 12],
-            10: [1, 5], 11: [0, 4], 12: [3, 7, 9], 13: [2, 6, 8]
-        };
-        
-        // Initialize occupiedEdges if needed
-        if (!tile.occupiedEdges) {
-            tile.occupiedEdges = [];
-        }
-        
-        // Try up to 50 times to find a valid placement
+    
+        if (!tile.occupiedEdges) tile.occupiedEdges = [];
+    
+        // Try up to 50 attempts
         for (let attempt = 0; attempt < 50; attempt++) {
-            const randomEdge = Math.floor(this.seededRandom() * 14);
-            
-            // Check if edge is already occupied
-            const edgeAlreadyUsed = tile.occupiedEdges.some(n => n.rootEdge === randomEdge);
-            if (edgeAlreadyUsed) {
-                continue;
-            }
-            
-            let neighborColor, sourceEdgeNum, reversedSource, reversedTarget, targetEdge, flipped;
-            
-            if (!parentIsFlipped) {  // Parent is LIGHT_BLUE (unflipped)
-                if (this.seededRandom() < 0.5) {
-                    // CASE 1: Unflipped → Flipped
-                    neighborColor = Tile.DARK_BLUE;
-                    const validSources = unflippedToFlipped[randomEdge];
-                    if (!validSources || validSources.length === 0) continue;
-                    sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
-                    reversedSource = false;
-                    reversedTarget = false;
-                    targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = false;  // ← Changed from true to false
-                } else {
-                    // CASE 2: Unflipped → Unflipped (SAME CHIRALITY)
-                    neighborColor = Tile.LIGHT_BLUE;
-                    const validSources = unflippedToUnflipped[randomEdge];
-                    if (!validSources || validSources.length === 0) continue;
-                    sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
-                    reversedSource = true;
-                    reversedTarget = false;
-                    targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = false;  // ← Changed from true to false
-                }
-            } else {  // Parent is DARK_BLUE (calling it "flipped")
-                if (this.seededRandom() < 0.5) {
-                    // CASE 3: Flipped → Unflipped
-                    neighborColor = Tile.LIGHT_BLUE;
-                    const validSources = flippedToUnflipped[randomEdge];
-                    if (!validSources || validSources.length === 0) continue;
-                    sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
-                    reversedSource = false;
-                    reversedTarget = false;
-                    targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = true;  // ← Changed from false to true
-                } else {
-                    // CASE 4: Flipped → Flipped (SAME CHIRALITY)
-                    neighborColor = Tile.DARK_BLUE;
-                    const validSources = flippedToFlipped[randomEdge];
-                    if (!validSources || validSources.length === 0) continue;
-                    sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
-                    reversedSource = true;
-                    reversedTarget = false;
-                    targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = true;  // ← Change from false to true
-                }
-            }
-            // ... determine neighbor placement ...
-            
-            // Check constraints before placing
-            if (!this.canPlaceWithConstraints(tile, randomEdge, sourceEdgeNum, reversedSource, flipped)) {
-                continue; // Skip this attempt, try another edge
-            }
-            
+            const rootEdge = Math.floor(this.seededRandom() * 14);
+            if (tile.occupiedEdges.some(n => n.rootEdge === rootEdge)) continue;
+    
+            const neighborIsFlipped = this.seededRandom() < 0.5; // choose flipped/unflipped randomly
+            const neighborColor = neighborIsFlipped ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
+    
+            const validSources = neighborEdges[parentIsFlipped][neighborIsFlipped][rootEdge];
+            if (!validSources || validSources.length === 0) continue;
+    
+            const sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
+            const reversedSource = neighborIsFlipped === parentIsFlipped; // same chirality = reversed?
+            const flipped = neighborIsFlipped;
+    
+            if (!this.canPlaceWithConstraints(tile, rootEdge, sourceEdgeNum, reversedSource, flipped)) continue;
+    
             const sourceEdge = reversedSource
-            ? [(sourceEdgeNum + 1) % 14, sourceEdgeNum]
-            : [sourceEdgeNum, (sourceEdgeNum + 1) % 14];
-        
-            const neighbor = Tile.createAttached(
-                sourceEdge,
-                tile,
-                targetEdge,
-                {flipped: flipped, color: neighborColor}
-            );
-            
-            // Initialize occupiedEdges if needed
-            if (!tile.occupiedEdges) {
-                tile.occupiedEdges = [];
-            }
-            
-            // Record this placement on the PARENT
-            tile.occupiedEdges.push({
-                rootEdge: randomEdge,
-                sourceEdge: sourceEdgeNum,
-                reversed: reversedSource,
-                flipped: flipped
-            });
-            
-            // ALSO record on the CHILD that it used an edge to connect
-            if (!neighbor.occupiedEdges) {
-                neighbor.occupiedEdges = [];
-            }
-            neighbor.occupiedEdges.push({
-                rootEdge: sourceEdgeNum,
-                sourceEdge: randomEdge,
-                reversed: reversedSource,
-                flipped: flipped
-            });
-            
+                ? [(sourceEdgeNum + 1) % 14, sourceEdgeNum]
+                : [sourceEdgeNum, (sourceEdgeNum + 1) % 14];
+    
+            const targetEdge = [rootEdge, (rootEdge + 1) % 14];
+            const neighbor = Tile.createAttached(sourceEdge, tile, targetEdge, {flipped, color: neighborColor});
+    
+            if (!neighbor || !neighbor.transform) continue;
+    
+            // Record occupied edges
+            tile.occupiedEdges.push({rootEdge, sourceEdge: sourceEdgeNum, reversed: reversedSource, flipped});
+            neighbor.occupiedEdges = [{rootEdge: sourceEdgeNum, sourceEdge: rootEdge, reversed: reversedSource, flipped}];
+    
             tiling.tiles.push(neighbor);
-            return; // Success!
+            return;
         }
-        
+    
         console.log('Could not place neighbor after 50 attempts');
-    }
-}
+    }    
+}    
 
 const explorer = new InfiniteExplorer('canvas');
 
