@@ -8,6 +8,21 @@
             this.canvas = document.getElementById(canvasId);
             this.ctx = this.canvas.getContext('2d');
             this.edgeConstraints = this.buildEdgeConstraints();
+            
+            // Edge mapping tables
+            this.neighborEdges = {
+                false: { 
+                    false: {0:[5,11],1:[0,4,10],2:[3,9,13],3:[2,6,8,12],4:[1,5,11],
+                           5:[0,4,10],6:[3,9,13],7:[8,12],8:[3,7,9,13],9:[2,6,8,12],10:[1,5],11:[0,4],12:[3,7,9],13:[2,6,8]},
+                    true: {0:[10],1:[11],2:[12],3:[13],4:[10],5:[11],6:[12],7:[13],8:[12],9:[13],10:[0,4],11:[1,5],12:[2,6,8],13:[3,7,9]}
+                },
+                true: { 
+                    false: {0:[10],1:[11],2:[12],3:[13],4:[10],5:[11],6:[12],7:[13],8:[12],9:[13],10:[0,4],11:[1,5],12:[2,6,8],13:[3,7,9]},
+                    true: {0:[5,11],1:[0,4,10],2:[3,9,13],3:[2,6,8,12],4:[1,5,11],
+                          5:[0,4,10],6:[3,9,13],7:[8,12],8:[3,7,9,13],9:[2,6,8,12],10:[1,5],11:[0,4],12:[3,7,9],13:[2,6,8]}
+                }
+            };
+            
             this.randomSeed();
         }
         
@@ -58,33 +73,22 @@
             
             // Place tiles one at a time
             for (let i = 0; i < 2; i++) {
-                // First, try to use the root tile
-                let parentTile = tiling.tiles[0]; // Always start with root
+                let parentTile = tiling.tiles[0];
                 
-                // If root is full (all 14 edges occupied), then look for other tiles
                 const rootOccupiedCount = parentTile.occupiedEdges ? parentTile.occupiedEdges.length : 0;
                 if (rootOccupiedCount >= 14) {
-                    // Root is full, find other tiles with free edges
                     const tilesWithFreeEdges = tiling.tiles.filter(tile => {
                         const occupiedCount = tile.occupiedEdges ? tile.occupiedEdges.length : 0;
                         return occupiedCount < 14;
                     });
                     
-                    if (tilesWithFreeEdges.length === 0) {
-                        break;
-                    }
+                    if (tilesWithFreeEdges.length === 0) break;
                     
-                    // Pick a random tile from those with free edges
                     const randomTileIndex = Math.floor(this.seededRandom() * tilesWithFreeEdges.length);
                     parentTile = tilesWithFreeEdges[randomTileIndex];
                 }
-                
-                const actualIndex = tiling.tiles.indexOf(parentTile);
-
-                // Place one neighbor on that tile
-                const beforeCount = tiling.tiles.length;
+            
                 this.placeRandomNeighbor(tiling, parentTile);
-                const afterCount = tiling.tiles.length;
             }
                         
             tiling.draw(this.ctx, 0);
@@ -238,39 +242,33 @@
                 const occupiedReversed = neighbor.reversed;
                 const occupiedFlipped = neighbor.flipped;
                                 
-                // DIRECTION 1: Check if occupied edge blocks new placement
+                // Check if occupied edge blocks new placement
                 const rootConstraints1 = this.edgeConstraints[occupiedRootEdge];
                 if (rootConstraints1) {
                     const sourceConstraints1 = rootConstraints1[occupiedSourceEdge];
-                    if (sourceConstraints1) {
+                    if (sourceConstraints1 && 
+                        sourceConstraints1.reversed === occupiedReversed && 
+                        sourceConstraints1.flipped === occupiedFlipped) {
                         
-                        if (sourceConstraints1.reversed === occupiedReversed && 
-                            sourceConstraints1.flipped === occupiedFlipped) {
-                            
-                            
-                            for (let [blockedRoot, blockedSource] of sourceConstraints1.blocks) {
-                                if (blockedRoot === rootEdge && blockedSource === sourceEdge) {
-                                    return false;
-                                }
+                        for (let [blockedRoot, blockedSource] of sourceConstraints1.blocks) {
+                            if (blockedRoot === rootEdge && blockedSource === sourceEdge) {
+                                return false;
                             }
                         }
                     }
                 }
                 
-                // DIRECTION 2: Check if new placement blocks occupied edge
+                // Check if new placement blocks occupied edge
                 const rootConstraints2 = this.edgeConstraints[rootEdge];
                 if (rootConstraints2) {
                     const sourceConstraints2 = rootConstraints2[sourceEdge];
-                    if (sourceConstraints2) {
+                    if (sourceConstraints2 && 
+                        sourceConstraints2.reversed === reversed && 
+                        sourceConstraints2.flipped === flipped) {
                         
-                        if (sourceConstraints2.reversed === reversed && 
-                            sourceConstraints2.flipped === flipped) {
-                            
-                            
-                            for (let [blockedRoot, blockedSource] of sourceConstraints2.blocks) {
-                                if (blockedRoot === occupiedRootEdge && blockedSource === occupiedSourceEdge) {
-                                    return false;
-                                }
+                        for (let [blockedRoot, blockedSource] of sourceConstraints2.blocks) {
+                            if (blockedRoot === occupiedRootEdge && blockedSource === occupiedSourceEdge) {
+                                return false;
                             }
                         }
                     }
@@ -281,38 +279,22 @@
         }
         
         placeRandomNeighbor(tiling, tile) {
-            const parentIsFlipped = (tile.color === Tile.DARK_BLUE); // Dark blue = always flipped
-                    
-            const unflippedToUnflipped = {0:[5,11],1:[0,4,10],2:[3,9,13],3:[2,6,8,12],4:[1,5,11],
-                5:[0,4,10],6:[3,9,13],7:[8,12],8:[3,7,9,13],9:[2,6,8,12],10:[1,5],11:[0,4],12:[3,7,9],13:[2,6,8]};
-            const unflippedToFlipped   = {0:[10],1:[11],2:[12],3:[13],4:[10],5:[11],6:[12],7:[13],8:[12],9:[13],10:[0,4],11:[1,5],12:[2,6,8],13:[3,7,9]};
-            const flippedToUnflipped   = {0:[10],1:[11],2:[12],3:[13],4:[10],5:[11],6:[12],7:[13],8:[12],9:[13],10:[0,4],11:[1,5],12:[2,6,8],13:[3,7,9]};
-            const flippedToFlipped     = {0:[5,11],1:[0,4,10],2:[3,9,13],3:[2,6,8,12],4:[1,5,11],
-                5:[0,4,10],6:[3,9,13],7:[8,12],8:[3,7,9,13],9:[2,6,8,12],10:[1,5],11:[0,4],12:[3,7,9],13:[2,6,8]};
-        
-            const neighborEdges = {
-                false: { false: unflippedToUnflipped, true: unflippedToFlipped },
-                true:  { false: flippedToUnflipped,     true: flippedToFlipped   }
-            };
+            const parentIsFlipped = (tile.color === Tile.DARK_BLUE);
         
             if (!tile.occupiedEdges) tile.occupiedEdges = [];
         
-            // Create array of all possible placements
             const allPossiblePlacements = [];
             
             for (let rootEdge = 0; rootEdge < 14; rootEdge++) {
-                // Skip already occupied edges
                 if (tile.occupiedEdges.some(n => n.rootEdge === rootEdge)) continue;
                 
-                // Try both neighbor colors randomly
                 for (let tryDarkBlue of [true, false]) {
                     const desiredColor = tryDarkBlue ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
                     const desiredFlipped = tryDarkBlue;
                     
-                    // Try BOTH flipped parameter values
                     for (let flippedParam of [true, false]) {
                         const sameChirality = (desiredFlipped === parentIsFlipped);
-                        const validSources = neighborEdges[parentIsFlipped][desiredFlipped][rootEdge];
+                        const validSources = this.neighborEdges[parentIsFlipped][desiredFlipped][rootEdge];
                         
                         if (!validSources || validSources.length === 0) continue;
                         
@@ -330,7 +312,7 @@
                 }
             }
             
-            // Shuffle the placements array for randomness
+            // Shuffle for randomness
             for (let i = allPossiblePlacements.length - 1; i > 0; i--) {
                 const j = Math.floor(this.seededRandom() * (i + 1));
                 [allPossiblePlacements[i], allPossiblePlacements[j]] = [allPossiblePlacements[j], allPossiblePlacements[i]];
@@ -339,59 +321,52 @@
             // Try each placement
             for (let placement of allPossiblePlacements) {
                 const { rootEdge, sourceEdgeNum, desiredColor, desiredFlipped, flippedParam, sameChirality } = placement;
-
-                console.log(`\nTrying: Root edge ${rootEdge}, Source edge ${sourceEdgeNum}, Color: ${desiredColor === Tile.DARK_BLUE ? 'DARK_BLUE' : 'LIGHT_BLUE'}, flippedParam: ${flippedParam}`);
-
-                console.log(`\nTrying: Root edge ${rootEdge}, Source edge ${sourceEdgeNum}, Color: ${desiredColor === Tile.DARK_BLUE ? 'DARK_BLUE' : 'LIGHT_BLUE'}, flippedParam: ${flippedParam}`);
-
+        
+                console.log(`Trying edge ${rootEdge}→${sourceEdgeNum} (${desiredColor === Tile.DARK_BLUE ? 'DARK' : 'LIGHT'})`);
+        
                 const reversedSource = sameChirality;
-
-                // CHECK CONSTRAINTS FIRST
+        
                 if (!this.canPlaceWithConstraints(tile, rootEdge, sourceEdgeNum, reversedSource, flippedParam)) {
-                    console.log('  ❌ Blocked by edge constraints');
+                    console.log('  ❌ Blocked by constraints');
                     continue;
                 }
-
+        
                 const sourceEdge = reversedSource
                     ? [(sourceEdgeNum + 1) % 14, sourceEdgeNum]
                     : [sourceEdgeNum, (sourceEdgeNum + 1) % 14];
-
+        
                 const targetEdge = [rootEdge, (rootEdge + 1) % 14];
                 const neighbor = Tile.createAttached(sourceEdge, tile, targetEdge, {flipped: flippedParam, color: desiredColor});
-
+        
                 if (!neighbor || !neighbor.transform) {
-                    console.log('  ❌ Failed to create tile');
+                    console.log('  ❌ Failed to create');
                     continue;
                 }
-
-                // Check actual chirality
+        
                 const det = neighbor.transform.values[0] * neighbor.transform.values[4] - 
                             neighbor.transform.values[1] * neighbor.transform.values[3];
                 const actuallyFlipped = det < 0;
-
+        
                 if (actuallyFlipped !== desiredFlipped) {
-                    console.log(`  ❌ Wrong chirality (wanted ${desiredFlipped}, got ${actuallyFlipped})`);
+                    console.log('  ❌ Wrong chirality');
                     continue;
                 }
-
+        
                 neighbor.color = desiredColor;
-
-                // Check for geometric conflict
+        
                 if (this.hasGeometricConflict(neighbor, tiling.tiles, tile)) {
-                    console.log(`  ❌ Geometric overlap`);
+                    console.log('  ❌ Overlap');
                     continue;
                 }
-
-                // No conflict - place the tile
-                console.log(`  ✅ SUCCESS! Placed tile`);
+        
+                console.log('  ✅ SUCCESS!');
                 tile.occupiedEdges.push({rootEdge, sourceEdge: sourceEdgeNum, reversed: reversedSource, flipped: flippedParam});
                 neighbor.occupiedEdges = [{rootEdge: sourceEdgeNum, sourceEdge: rootEdge, reversed: reversedSource, flipped: flippedParam}];
                 tiling.tiles.push(neighbor);
                 return;
             }
-
-            console.log('\n⚠️ Could not place neighbor - all possible placements cause overlaps');
         
+            console.log('⚠️ No valid placement found');
         }
         
         hasGeometricConflict(newTile, existingTiles, parentTile) {
