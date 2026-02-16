@@ -135,7 +135,7 @@ class InfiniteExplorer {
                 13: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [7, 8], [7, 12], [8, 7], [8, 9]] }
             },
             7: {
-                8: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 13], [8, 3], [8, 7], [8, 9], [8, 13], [9, 6], [9, 12]] },
+                8: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 13], [8, 3], [8, 7], [8, 9], [8, 13], [9, 6], [9, 12], [10, 5]] },
                 12: { reversed: true, flipped: false, blocks: [[4, 11], [5, 0], [5, 4], [5, 10], [6, 3], [6, 9], [6, 13], [8, 7], [8, 9]] }
             },
             8: {
@@ -152,7 +152,7 @@ class InfiniteExplorer {
             },
             10: {
                 1: { reversed: true, flipped: false, blocks: [[8, 13], [9, 6], [9, 8], [11, 0], [11, 4]] },
-                5: {reversed: true, flipped: false, blocks: [[8, 3], [8, 7], [8, 13], [9, 2], [9, 6], [9, 8], [9, 12], [11, 0], [11, 4]] }
+                5: {reversed: true, flipped: false, blocks: [[7, 8], [8, 3], [8, 7], [8, 13], [9, 2], [9, 6], [9, 8], [9, 12], [11, 0], [11, 4]] }
             },
             11: {
                 0: { reversed: true, flipped: false, blocks: [[8, 13], [9, 2], [9, 6], [9, 8], [10, 1], [10, 5]] },
@@ -192,11 +192,11 @@ class InfiniteExplorer {
             if (rootConstraints1) {
                 const sourceConstraints1 = rootConstraints1[occupiedSourceEdge];
                 if (sourceConstraints1) {
-                    console.log(`    Found constraints for occupied edge. Rev match: ${sourceConstraints1.reversed === occupiedReversed}, Flip match: ${sourceConstraints1.flipped === false && occupiedFlipped === true}`);
+                    // Match when constraint data has flipped:false and placement uses flipped:false OR flipped:true
+                    const flipMatch = sourceConstraints1.flipped === false && (occupiedFlipped === false || occupiedFlipped === true);
+                    console.log(`    Found constraints for occupied edge. Rev match: ${sourceConstraints1.reversed === occupiedReversed}, Flip match: ${flipMatch}`);
                     
-                    if (sourceConstraints1.reversed === occupiedReversed && 
-                        sourceConstraints1.flipped === false && occupiedFlipped === true) {
-                        
+                    if (sourceConstraints1.reversed === occupiedReversed && flipMatch) {
                         console.log(`    Blocks:`, sourceConstraints1.blocks);
                         
                         for (let [blockedRoot, blockedSource] of sourceConstraints1.blocks) {
@@ -214,11 +214,10 @@ class InfiniteExplorer {
             if (rootConstraints2) {
                 const sourceConstraints2 = rootConstraints2[sourceEdge];
                 if (sourceConstraints2) {
-                    console.log(`    Found constraints for new edge. Rev match: ${sourceConstraints2.reversed === reversed}, Flip match: ${sourceConstraints2.flipped === false && flipped === true}`);
+                    const flipMatch = sourceConstraints2.flipped === false && (flipped === false || flipped === true);
+                    console.log(`    Found constraints for new edge. Rev match: ${sourceConstraints2.reversed === reversed}, Flip match: ${flipMatch}`);
                     
-                    if (sourceConstraints2.reversed === reversed && 
-                        sourceConstraints2.flipped === false && flipped === true) {
-                        
+                    if (sourceConstraints2.reversed === reversed && flipMatch) {
                         console.log(`    Blocks:`, sourceConstraints2.blocks);
                         
                         for (let [blockedRoot, blockedSource] of sourceConstraints2.blocks) {
@@ -278,17 +277,17 @@ class InfiniteExplorer {
             
             let neighborColor, sourceEdgeNum, reversedSource, reversedTarget, targetEdge, flipped;
             
-            if (!parentIsFlipped) {  // Parent is LIGHT_BLUE (calling it "unflipped")
+            if (!parentIsFlipped) {  // Parent is LIGHT_BLUE (unflipped)
                 if (this.seededRandom() < 0.5) {
                     // CASE 1: Unflipped → Flipped
-                    neighborColor = Tile.DARK_BLUE;  // ← Swapped
+                    neighborColor = Tile.DARK_BLUE;
                     const validSources = unflippedToFlipped[randomEdge];
                     if (!validSources || validSources.length === 0) continue;
                     sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
                     reversedSource = false;
                     reversedTarget = false;
                     targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = true;
+                    flipped = false;  // ← Changed from true to false
                 } else {
                     // CASE 2: Unflipped → Unflipped (SAME CHIRALITY)
                     neighborColor = Tile.LIGHT_BLUE;
@@ -298,19 +297,19 @@ class InfiniteExplorer {
                     reversedSource = true;
                     reversedTarget = false;
                     targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = true;  // ← Change from false to true
+                    flipped = false;  // ← Changed from true to false
                 }
             } else {  // Parent is DARK_BLUE (calling it "flipped")
                 if (this.seededRandom() < 0.5) {
                     // CASE 3: Flipped → Unflipped
-                    neighborColor = Tile.LIGHT_BLUE;  // ← Swapped
+                    neighborColor = Tile.LIGHT_BLUE;
                     const validSources = flippedToUnflipped[randomEdge];
                     if (!validSources || validSources.length === 0) continue;
                     sourceEdgeNum = validSources[Math.floor(this.seededRandom() * validSources.length)];
                     reversedSource = false;
                     reversedTarget = false;
                     targetEdge = [randomEdge, (randomEdge + 1) % 14];
-                    flipped = false;
+                    flipped = true;  // ← Changed from false to true
                 } else {
                     // CASE 4: Flipped → Flipped (SAME CHIRALITY)
                     neighborColor = Tile.DARK_BLUE;
