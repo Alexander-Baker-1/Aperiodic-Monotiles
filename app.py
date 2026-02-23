@@ -30,5 +30,9 @@ def chains():
 def constraint_tester():
     return render_template('constraint-tester.html')
 
+@app.route('/hierarchical-hat')
+def hierarchical_hat():
+    return render_template('hierarchical-hat.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
