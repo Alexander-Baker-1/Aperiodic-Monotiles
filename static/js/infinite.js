@@ -49,10 +49,7 @@
             const geometry = new HatGeometry(1, Math.sqrt(3));
             const tiling = new TilingSystem(geometry);
             
-            // Randomly choose to flip or not
             const shouldFlip = this.seededRandom() < 0.5;
-            
-            // Dark blue = flipped, Light blue = unflipped (ALWAYS)
             const rootColor = shouldFlip ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
             
             const randomAngle = this.seededRandom() * 2 * Math.PI;
@@ -60,7 +57,6 @@
             const scaling = Matrix.scale(20);
             const translation = Matrix.translation(400, 300);
             
-            // Apply flip if and only if it's dark blue
             let rootTransform;
             if (shouldFlip) {
                 const flip = Matrix.flipX();
@@ -71,28 +67,52 @@
             
             const rootTile = tiling.addRootTile(rootTransform, rootColor);
             
-            // Place tiles one at a time
-            for (let i = 0; i < 2; i++) {
-                let parentTile = tiling.tiles[0];
-                
-                const rootOccupiedCount = parentTile.occupiedEdges ? parentTile.occupiedEdges.length : 0;
-                if (rootOccupiedCount >= 14) {
-                    const tilesWithFreeEdges = tiling.tiles.filter(tile => {
-                        const occupiedCount = tile.occupiedEdges ? tile.occupiedEdges.length : 0;
-                        return occupiedCount < 14;
-                    });
-                    
-                    if (tilesWithFreeEdges.length === 0) break;
-                    
-                    const randomTileIndex = Math.floor(this.seededRandom() * tilesWithFreeEdges.length);
-                    parentTile = tilesWithFreeEdges[randomTileIndex];
-                }
+            console.log(`\n🎲 Starting with tile 0 (${rootColor === Tile.DARK_BLUE ? 'DARK' : 'LIGHT'})`);
             
-                this.placeRandomNeighbor(tiling, parentTile);
+            // BETTER APPROACH: Round-robin through tiles
+            let consecutiveFailures = 0;
+            const maxConsecutiveFailures = tiling.tiles.length * 2; // Give up after trying each tile twice
+            
+            for (let i = 0; i < 50; i++) { // Try to place up to 50 tiles
+                // Find all tiles with free edges
+                const tilesWithFreeEdges = tiling.tiles.filter(tile => {
+                    const occupiedCount = tile.occupiedEdges ? tile.occupiedEdges.length : 0;
+                    return occupiedCount < 14;
+                });
+                
+                if (tilesWithFreeEdges.length === 0) {
+                    console.log('❌ All tiles have all edges occupied!');
+                    break;
+                }
+                
+                // Pick a random tile with free edges
+                const randomIndex = Math.floor(this.seededRandom() * tilesWithFreeEdges.length);
+                const parentTile = tilesWithFreeEdges[randomIndex];
+                const parentIndex = tiling.tiles.indexOf(parentTile);
+                
+                console.log(`\n📍 Attempting to place tile ${tiling.tiles.length} as neighbor of tile ${parentIndex}`);
+                const beforeCount = tiling.tiles.length;
+                this.placeRandomNeighbor(tiling, parentTile, parentIndex);
+                const afterCount = tiling.tiles.length;
+                
+                if (afterCount === beforeCount) {
+                    console.log(`❌ Failed to place tile ${tiling.tiles.length}`);
+                    consecutiveFailures++;
+                    
+                    if (consecutiveFailures >= maxConsecutiveFailures) {
+                        console.log(`\n⚠️ Stopping: ${consecutiveFailures} consecutive failures`);
+                        break;
+                    }
+                } else {
+                    consecutiveFailures = 0; // Reset on success
+                }
             }
+            
+            console.log(`\n✅ Final: ${tiling.tiles.length} tiles placed`);
                         
             tiling.draw(this.ctx, 0);
             tiling.drawVertexLabels(this.ctx);
+            this.drawTileNumbers(tiling);
         }
         
         buildEdgeConstraints() {
@@ -116,7 +136,7 @@
                 },
                 2: {
                     // Same chirality
-                    3: { reversed: true, flipped: false, blocks: [[0, 11], [1, 0], [1, 4], [1, 10], [3, 6], [3, 12]] },
+                    3: { reversed: true, flipped: false, blocks: [[0, 11], [1, 0], [1, 4], [1, 10], [3, 6], [3, 12], ] },
                     9: { reversed: true, flipped: false, blocks: [[0, 5], [0, 11], [1, 0], [1, 4], [1, 10], [3, 12], [12, 3], [12, 7], [13, 2], [13, 6]] },
                     13: { reversed: true, flipped: false, blocks: [[0, 11], [1, 0], [1, 4], [1, 10], [3, 2], [3, 6], [3, 8], [3, 12], [4, 1], [4, 5]] },
                     
@@ -278,7 +298,7 @@
             return true;
         }
         
-        placeRandomNeighbor(tiling, tile) {
+        placeRandomNeighbor(tiling, tile, parentIndex) {
             const parentIsFlipped = (tile.color === Tile.DARK_BLUE);
         
             if (!tile.occupiedEdges) tile.occupiedEdges = [];
@@ -318,16 +338,15 @@
                 [allPossiblePlacements[i], allPossiblePlacements[j]] = [allPossiblePlacements[j], allPossiblePlacements[i]];
             }
             
+            console.log(`  Trying ${allPossiblePlacements.length} possible placements...`);
+            
             // Try each placement
             for (let placement of allPossiblePlacements) {
                 const { rootEdge, sourceEdgeNum, desiredColor, desiredFlipped, flippedParam, sameChirality } = placement;
         
-                console.log(`Trying edge ${rootEdge}→${sourceEdgeNum} (${desiredColor === Tile.DARK_BLUE ? 'DARK' : 'LIGHT'})`);
-        
                 const reversedSource = sameChirality;
         
                 if (!this.canPlaceWithConstraints(tile, rootEdge, sourceEdgeNum, reversedSource, flippedParam)) {
-                    console.log('  ❌ Blocked by constraints');
                     continue;
                 }
         
@@ -339,7 +358,6 @@
                 const neighbor = Tile.createAttached(sourceEdge, tile, targetEdge, {flipped: flippedParam, color: desiredColor});
         
                 if (!neighbor || !neighbor.transform) {
-                    console.log('  ❌ Failed to create');
                     continue;
                 }
         
@@ -348,25 +366,25 @@
                 const actuallyFlipped = det < 0;
         
                 if (actuallyFlipped !== desiredFlipped) {
-                    console.log('  ❌ Wrong chirality');
                     continue;
                 }
         
                 neighbor.color = desiredColor;
         
                 if (this.hasGeometricConflict(neighbor, tiling.tiles, tile)) {
-                    console.log('  ❌ Overlap');
                     continue;
                 }
         
-                console.log('  ✅ SUCCESS!');
+                const newTileIndex = tiling.tiles.length;
+                console.log(`  ✅ Tile ${newTileIndex} placed on edge ${rootEdge} of tile ${parentIndex} (${desiredColor === Tile.DARK_BLUE ? 'DARK' : 'LIGHT'})`);
+                
                 tile.occupiedEdges.push({rootEdge, sourceEdge: sourceEdgeNum, reversed: reversedSource, flipped: flippedParam});
                 neighbor.occupiedEdges = [{rootEdge: sourceEdgeNum, sourceEdge: rootEdge, reversed: reversedSource, flipped: flippedParam}];
                 tiling.tiles.push(neighbor);
                 return;
             }
         
-            console.log('⚠️ No valid placement found');
+            console.log(`  ❌ No valid placement found (tried ${allPossiblePlacements.length} options)`);
         }
         
         hasGeometricConflict(newTile, existingTiles, parentTile) {
@@ -490,6 +508,30 @@
         bboxesOverlap(box1, box2) {
             return !(box1.maxX < box2.minX || box2.maxX < box1.minX ||
                     box1.maxY < box2.minY || box2.maxY < box1.minY);
+        }
+
+        drawTileNumbers(tiling) {
+            this.ctx.fillStyle = 'white';
+            this.ctx.strokeStyle = 'black';
+            this.ctx.lineWidth = 3;
+            this.ctx.font = 'bold 16px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            for (let i = 0; i < tiling.tiles.length; i++) {
+                const tile = tiling.tiles[i];
+                
+                // Calculate center of tile
+                const verts = this.getTransformedVertices(tile);
+                const centerX = verts.reduce((sum, v) => sum + v.x, 0) / verts.length;
+                const centerY = verts.reduce((sum, v) => sum + v.y, 0) / verts.length;
+                
+                const label = i.toString();
+                
+                // Draw text with outline for visibility
+                this.ctx.strokeText(label, centerX, centerY);
+                this.ctx.fillText(label, centerX, centerY);
+            }
         }
     }    
 

@@ -9,10 +9,9 @@ class ConstraintTester {
         this.ctx = this.canvas.getContext('2d');
         this.geometry = new HatGeometry(1, Math.sqrt(3));
         
-        this.rootTile = null;
-        this.neighbors = [];
-        this.lockedNeighbors = [];
-        this.discoveredConstraints = {};
+        this.tiling = null;
+        this.tiles = []; // All tiles in order
+        this.lockedTiles = new Set([0]); // Root is always locked
         
         this.createUI();
         this.generate();
@@ -28,45 +27,31 @@ class ConstraintTester {
         container.style.borderRadius = '8px';
         container.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         container.style.maxWidth = '350px';
+        container.style.maxHeight = '90vh';
+        container.style.overflowY = 'auto';
         
         const title = document.createElement('h3');
         title.textContent = 'Edge Constraint Tester';
         title.style.marginTop = '0';
         container.appendChild(title);
         
-        // Root tile color selector
-        const rootColorLabel = document.createElement('label');
-        rootColorLabel.textContent = 'Root tile color: ';
-        container.appendChild(rootColorLabel);
+        // Parent tile selector
+        const parentLabel = document.createElement('label');
+        parentLabel.textContent = 'Parent tile: ';
+        container.appendChild(parentLabel);
         
-        this.rootColorSelect = document.createElement('select');
-        const rootColors = [
-            { name: 'Light Blue (Unflipped)', value: 'unflipped' },
-            { name: 'Dark Blue (Flipped)', value: 'flipped' }
-        ];
-        for (let c of rootColors) {
-            const option = document.createElement('option');
-            option.value = c.value;
-            option.textContent = c.name;
-            this.rootColorSelect.appendChild(option);
-        }
-        this.rootColorSelect.addEventListener('change', () => this.generate());
-        container.appendChild(this.rootColorSelect);
+        this.parentTileSelect = document.createElement('select');
+        this.parentTileSelect.addEventListener('change', () => this.updateEdgeAvailability());
+        container.appendChild(this.parentTileSelect);
         container.appendChild(document.createElement('br'));
         container.appendChild(document.createElement('br'));
         
         // Root edge selector
         const rootEdgeLabel = document.createElement('label');
-        rootEdgeLabel.textContent = 'Root tile edge: ';
+        rootEdgeLabel.textContent = 'Parent tile edge: ';
         container.appendChild(rootEdgeLabel);
         
         this.rootEdgeSelect = document.createElement('select');
-        for (let i = 0; i < 14; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = `Edge ${i}`;
-            this.rootEdgeSelect.appendChild(option);
-        }
         container.appendChild(this.rootEdgeSelect);
         container.appendChild(document.createElement('br'));
         container.appendChild(document.createElement('br'));
@@ -117,47 +102,40 @@ class ConstraintTester {
         
         // Auto-update reverse checkbox based on color
         this.colorSelect.addEventListener('change', () => {
-            const isFlipped = this.colorSelect.value === 'flipped';
-            const rootIsFlipped = this.rootColorSelect.value === 'flipped';
-            
-            // Unflipped→Unflipped or Flipped→Flipped = reversed
-            if (isFlipped === rootIsFlipped) {
-                this.reverseCheckbox.checked = true;
-            } else {
-                this.reverseCheckbox.checked = false;
-            }
+            this.updateReverseCheckbox();
         });
         
         container.appendChild(this.colorSelect);
         container.appendChild(document.createElement('br'));
         container.appendChild(document.createElement('br'));
         
-        // Place button
+        // Buttons row 1
         const placeBtn = document.createElement('button');
         placeBtn.textContent = 'Place Neighbor';
         placeBtn.onclick = () => this.placeNeighbor();
         container.appendChild(placeBtn);
         
-        // Lock button
         const lockBtn = document.createElement('button');
-        lockBtn.textContent = 'Lock Current';
+        lockBtn.textContent = 'Lock All';
         lockBtn.style.marginLeft = '10px';
-        lockBtn.onclick = () => this.lockNeighbors();
+        lockBtn.onclick = () => this.lockAll();
         container.appendChild(lockBtn);
         
-        // Clear unlocked button
-        const clearBtn = document.createElement('button');
-        clearBtn.textContent = 'Clear Unlocked';
-        clearBtn.style.marginLeft = '10px';
-        clearBtn.onclick = () => this.clear();
-        container.appendChild(clearBtn);
+        container.appendChild(document.createElement('br'));
         
-        // Clear all button
-        const clearAllBtn = document.createElement('button');
-        clearAllBtn.textContent = 'Clear All';
-        clearAllBtn.style.marginLeft = '10px';
-        clearAllBtn.onclick = () => this.clearAll();
-        container.appendChild(clearAllBtn);
+        // Buttons row 2
+        const clearUnlockedBtn = document.createElement('button');
+        clearUnlockedBtn.textContent = 'Clear Unlocked';
+        clearUnlockedBtn.style.marginTop = '5px';
+        clearUnlockedBtn.onclick = () => this.clearUnlocked();
+        container.appendChild(clearUnlockedBtn);
+        
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = 'Reset All';
+        resetBtn.style.marginLeft = '10px';
+        resetBtn.style.marginTop = '5px';
+        resetBtn.onclick = () => this.reset();
+        container.appendChild(resetBtn);
         
         container.appendChild(document.createElement('br'));
         container.appendChild(document.createElement('br'));
@@ -168,10 +146,10 @@ class ConstraintTester {
         this.statusDiv.style.color = '#666';
         container.appendChild(this.statusDiv);
         
-        // Placed neighbors log
+        // Placed tiles log
         container.appendChild(document.createElement('br'));
         const logTitle = document.createElement('strong');
-        logTitle.textContent = 'Placed Neighbors:';
+        logTitle.textContent = 'Placed Tiles:';
         container.appendChild(logTitle);
         
         this.logDiv = document.createElement('div');
@@ -186,57 +164,79 @@ class ConstraintTester {
     }
     
     generate() {
-        const tiling = new TilingSystem(this.geometry);
+        this.tiling = new TilingSystem(this.geometry);
         
         const scaling = Matrix.scale(30);
         const translation = Matrix.translation(400, 300);
+        const flip = Matrix.flipX();
         
-        // Determine root color from selector
-        const rootIsFlipped = this.rootColorSelect.value === 'flipped';
-        const rootColor = rootIsFlipped ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
+        // Start with a dark blue (flipped) root tile
+        const baseTransform = translation.multiply(flip).multiply(scaling);
+        const rootTile = this.tiling.addRootTile(baseTransform, Tile.DARK_BLUE);
+        rootTile.occupiedEdges = [];
+        rootTile.tileIndex = 0;
         
-        // Apply flip transform if root is unflipped (light blue)
-        // In your system: LIGHT_BLUE = unflipped (needs flip in transform), DARK_BLUE = flipped (no flip)
-        let baseTransform;
-        if (rootIsFlipped) {
-            // Dark blue (flipped) - no flip transform needed
-            baseTransform = translation.multiply(scaling);
-        } else {
-            // Light blue (unflipped) - needs flip transform
-            const flip = Matrix.flipX();
-            baseTransform = translation.multiply(flip).multiply(scaling);
-        }
+        this.tiles = [rootTile];
         
-        this.rootTile = tiling.addRootTile(baseTransform, rootColor);
-        this.rootTile.occupiedEdges = new Set();
-        
-        // Re-add locked neighbors first
-        for (let neighbor of this.lockedNeighbors) {
-            tiling.tiles.push(neighbor);
-            // Re-mark their edges as occupied
-            for (let edge of neighbor.rootEdge) {
-                this.rootTile.occupiedEdges.add(edge);
-            }
-        }
-        
-        // Then add unlocked neighbors
-        for (let neighbor of this.neighbors) {
-            tiling.tiles.push(neighbor);
-        }
-        
+        this.updateParentSelector();
         this.updateStatus();
-        this.draw(tiling);
+        this.draw();
+    }
+    
+    updateParentSelector() {
+        this.parentTileSelect.innerHTML = '';
+        for (let i = 0; i < this.tiles.length; i++) {
+            const tile = this.tiles[i];
+            const option = document.createElement('option');
+            option.value = i;
+            const color = tile.color === Tile.DARK_BLUE ? 'DARK' : 'LIGHT';
+            const occupiedCount = tile.occupiedEdges ? tile.occupiedEdges.length : 0;
+            const locked = this.lockedTiles.has(i) ? '🔒' : '';
+            option.textContent = `${locked}Tile ${i} (${color}, ${occupiedCount}/14 edges used)`;
+            this.parentTileSelect.appendChild(option);
+        }
+        this.updateEdgeAvailability();
+    }
+    
+    updateEdgeAvailability() {
+        const parentIndex = parseInt(this.parentTileSelect.value);
+        const parentTile = this.tiles[parentIndex];
+        
+        this.rootEdgeSelect.innerHTML = '';
+        for (let i = 0; i < 14; i++) {
+            const isOccupied = parentTile.occupiedEdges && 
+                             parentTile.occupiedEdges.some(e => e.rootEdge === i);
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `Edge ${i}${isOccupied ? ' (occupied)' : ''}`;
+            option.disabled = isOccupied;
+            this.rootEdgeSelect.appendChild(option);
+        }
+        
+        this.updateReverseCheckbox();
+    }
+    
+    updateReverseCheckbox() {
+        const parentIndex = parseInt(this.parentTileSelect.value);
+        const parentTile = this.tiles[parentIndex];
+        const parentIsFlipped = parentTile.color === Tile.DARK_BLUE;
+        const neighborIsFlipped = this.colorSelect.value === 'flipped';
+        
+        // Same chirality = reversed
+        this.reverseCheckbox.checked = (neighborIsFlipped === parentIsFlipped);
     }
     
     placeNeighbor() {
+        const parentIndex = parseInt(this.parentTileSelect.value);
+        const parentTile = this.tiles[parentIndex];
         const rootEdge = parseInt(this.rootEdgeSelect.value);
         const sourceEdge = parseInt(this.sourceEdgeSelect.value);
         const reversed = this.reverseCheckbox.checked;
         const isFlipped = this.colorSelect.value === 'flipped';
         
         // Check if edge already occupied
-        if (this.rootTile.occupiedEdges.has(rootEdge)) {
-            alert(`Edge ${rootEdge} already has a neighbor!`);
+        if (parentTile.occupiedEdges && parentTile.occupiedEdges.some(e => e.rootEdge === rootEdge)) {
+            alert(`Edge ${rootEdge} on tile ${parentIndex} already has a neighbor!`);
             return;
         }
         
@@ -249,155 +249,256 @@ class ConstraintTester {
         try {
             const neighbor = Tile.createAttached(
                 source,
-                this.rootTile,
+                parentTile,
                 targetEdge,
-                { flipped: isFlipped, color: neighborColor }
+                { flipped: reversed, color: neighborColor }
             );
             
-            neighbor.occupiedEdges = new Set([sourceEdge]);
-            neighbor.sourceEdgeUsed = sourceEdge;
-            neighbor.wasReversed = reversed;
+            // Verify chirality
+            const det = neighbor.transform.values[0] * neighbor.transform.values[4] - 
+                        neighbor.transform.values[1] * neighbor.transform.values[3];
+            const actuallyFlipped = det < 0;
             
-            // Check for overlap with existing neighbors
-            if (this.checkOverlap(neighbor)) {
-                const conflicts = this.neighbors.map(n => 
-                    `Edge ${Array.from(n.rootEdge)[0]} (src ${n.sourceEdgeUsed}${n.wasReversed ? 'R' : ''})`
-                ).join(', ');
-                
-                alert(`⚠️ OVERLAP DETECTED!\n\nRoot edge ${rootEdge} → Source ${sourceEdge}${reversed ? ' (reversed)' : ''} ${isFlipped ? 'FLIPPED' : 'UNFLIPPED'}\n\nConflicts with: ${conflicts}`);
+            if (actuallyFlipped !== isFlipped) {
+                alert(`⚠️ CHIRALITY MISMATCH!\n\nExpected: ${isFlipped ? 'FLIPPED' : 'UNFLIPPED'}\nGot: ${actuallyFlipped ? 'FLIPPED' : 'UNFLIPPED'}\n\nTry toggling the 'Reverse source edge' checkbox.`);
                 return;
             }
             
-            neighbor.rootEdge = new Set([rootEdge]);
-            this.rootTile.occupiedEdges.add(rootEdge);
-            this.neighbors.push(neighbor);
+            // Check for overlap with ALL existing tiles
+            if (this.checkOverlap(neighbor, parentTile)) {
+                alert(`⚠️ OVERLAP DETECTED!\n\nTile ${parentIndex}, Edge ${rootEdge} → Source ${sourceEdge}${reversed ? ' (reversed)' : ''} ${isFlipped ? 'FLIPPED' : 'UNFLIPPED'}\n\nOverlaps with existing tiles!`);
+                return;
+            }
             
-            this.generate();
+            // Success! Add the neighbor
+            neighbor.occupiedEdges = [];
+            neighbor.tileIndex = this.tiles.length;
+            neighbor.parentIndex = parentIndex;
+            neighbor.parentEdge = rootEdge;
+            neighbor.sourceEdgeUsed = sourceEdge;
+            neighbor.wasReversed = reversed;
+            
+            if (!parentTile.occupiedEdges) parentTile.occupiedEdges = [];
+            parentTile.occupiedEdges.push({
+                rootEdge: rootEdge,
+                sourceEdge: sourceEdge,
+                reversed: reversed,
+                flipped: reversed
+            });
+            
+            this.tiles.push(neighbor);
+            this.tiling.tiles.push(neighbor);
+            
+            this.updateParentSelector();
+            this.updateStatus();
+            this.draw();
             
         } catch (error) {
             alert(`Error placing neighbor: ${error.message}`);
         }
     }
     
-    updateStatus() {
-        this.statusDiv.textContent = `Neighbors placed: ${this.neighbors.length}`;
-        
-        // Log all placed neighbors
-        let log = '';
-        for (let i = 0; i < this.neighbors.length; i++) {
-            const n = this.neighbors[i];
-            const rootEdge = Array.from(n.rootEdge)[0];
-            const color = n.color === Tile.DARK_BLUE ? 'FLIP' : 'UNFL';
-            log += `${i + 1}. Root:${rootEdge} → Src:${n.sourceEdgeUsed}${n.wasReversed ? 'R' : ''} [${color}]\n`;
+    lockAll() {
+        for (let i = 0; i < this.tiles.length; i++) {
+            this.lockedTiles.add(i);
         }
-        this.logDiv.textContent = log || 'None';
-    }
-    
-    lockNeighbors() {
-        // Move all current neighbors to locked
-        this.lockedNeighbors.push(...this.neighbors);
-        this.neighbors = [];
+        this.updateParentSelector();
         this.updateStatus();
-        console.log('Locked', this.lockedNeighbors.length, 'neighbors');
+        console.log(`🔒 Locked ${this.tiles.length} tiles`);
     }
     
-    clear() {
-        // Only clear unlocked neighbors
-        this.neighbors = [];
-        // Remove unlocked edges from rootTile.occupiedEdges
-        const lockedEdges = new Set(this.lockedNeighbors.flatMap(n => Array.from(n.rootEdge)));
-        const newOccupiedEdges = new Set();
-        for (let edge of this.rootTile.occupiedEdges) {
-            if (lockedEdges.has(edge)) {
-                newOccupiedEdges.add(edge);
+    clearUnlocked() {
+        // Keep only locked tiles
+        const newTiles = [];
+        const newTiling = new TilingSystem(this.geometry);
+        
+        for (let i = 0; i < this.tiles.length; i++) {
+            if (this.lockedTiles.has(i)) {
+                const tile = this.tiles[i];
+                tile.tileIndex = newTiles.length;
+                
+                // Clean up occupied edges - remove references to unlocked tiles
+                if (tile.occupiedEdges) {
+                    tile.occupiedEdges = tile.occupiedEdges.filter(edge => {
+                        // Find the child tile that was on this edge
+                        for (let j = 0; j < this.tiles.length; j++) {
+                            if (this.tiles[j].parentIndex === i && 
+                                this.tiles[j].parentEdge === edge.rootEdge) {
+                                // Keep this edge only if the child is locked
+                                return this.lockedTiles.has(j);
+                            }
+                        }
+                        return false;
+                    });
+                }
+                
+                newTiles.push(tile);
+                newTiling.tiles.push(tile);
             }
         }
-        this.rootTile.occupiedEdges = newOccupiedEdges;
+        
+        // Update locked tile indices
+        const newLockedTiles = new Set();
+        for (let i = 0; i < newTiles.length; i++) {
+            newLockedTiles.add(i);
+        }
+        
+        this.tiles = newTiles;
+        this.tiling = newTiling;
+        this.lockedTiles = newLockedTiles;
+        
+        this.updateParentSelector();
+        this.updateStatus();
+        this.draw();
+        
+        console.log(`Cleared unlocked tiles. ${this.tiles.length} locked tiles remain.`);
+    }
+    
+    reset() {
+        this.lockedTiles = new Set([0]); // Only root is locked
         this.generate();
     }
     
-    clearAll() {
-        // Clear everything including locked
-        this.neighbors = [];
-        this.lockedNeighbors = [];
-        this.rootTile.occupiedEdges.clear();
-        this.generate();
-    }
-    
-    updateStatus() {
-        this.statusDiv.textContent = `Neighbors: ${this.neighbors.length} unlocked, ${this.lockedNeighbors.length} locked`;
+    checkOverlap(newTile, parentTile) {
+        const newVerts = this.getTransformedVertices(newTile);
         
-        let log = '';
-        
-        // Show locked neighbors
-        if (this.lockedNeighbors.length > 0) {
-            log += '🔒 LOCKED:\n';
-            for (let i = 0; i < this.lockedNeighbors.length; i++) {
-                const n = this.lockedNeighbors[i];
-                const rootEdge = Array.from(n.rootEdge)[0];
-                const color = n.color === Tile.DARK_BLUE ? 'FLIP' : 'UNFL';
-                log += `  ${i + 1}. Root:${rootEdge} → Src:${n.sourceEdgeUsed}${n.wasReversed ? 'R' : ''} [${color}]\n`;
-            }
-            log += '\n';
-        }
-        
-        // Show unlocked neighbors
-        for (let i = 0; i < this.neighbors.length; i++) {
-            const n = this.neighbors[i];
-            const rootEdge = Array.from(n.rootEdge)[0];
-            const color = n.color === Tile.DARK_BLUE ? 'FLIP' : 'UNFL';
-            log += `${i + 1}. Root:${rootEdge} → Src:${n.sourceEdgeUsed}${n.wasReversed ? 'R' : ''} [${color}]\n`;
-        }
-        
-        this.logDiv.textContent = log || 'None';
-    }
-    
-    checkOverlap(newTile) {
-        const newPos = newTile.transform.transformPoint({x: 0, y: 0});
-        
-        // Check against both locked and unlocked neighbors
-        const allNeighbors = [...this.lockedNeighbors, ...this.neighbors];
-        
-        for (let existingTile of allNeighbors) {
-            const existingPos = existingTile.transform.transformPoint({x: 0, y: 0});
-            const dist = Math.sqrt(
-                Math.pow(newPos.x - existingPos.x, 2) + 
-                Math.pow(newPos.y - existingPos.y, 2)
-            );
+        for (let i = 0; i < this.tiles.length; i++) {
+            const existingTile = this.tiles[i];
+            if (existingTile === parentTile) continue;
             
-            if (dist < 5) {
+            const existingVerts = this.getTransformedVertices(existingTile);
+            
+            const sharedVertices = this.countSharedVertices(newVerts, existingVerts);
+            
+            if (sharedVertices !== 0 && sharedVertices !== 2) {
+                return true;
+            }
+            
+            if (this.polygonsOverlap(newVerts, existingVerts)) {
                 return true;
             }
         }
         return false;
     }
     
-    draw(tiling) {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    getTransformedVertices(tile) {
+        const baseVertices = tile.geometry.vertices;
+        return baseVertices.map(v => {
+            const transformed = tile.transform.transformPoint(v);
+            return { x: transformed.x, y: transformed.y };
+        });
+    }
+    
+    countSharedVertices(verts1, verts2) {
+        const tolerance = 0.05;
+        let count = 0;
+        for (let v1 of verts1) {
+            for (let v2 of verts2) {
+                const dx = v1.x - v2.x;
+                const dy = v1.y - v2.y;
+                if (Math.sqrt(dx*dx + dy*dy) < tolerance) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        return count;
+    }
+    
+    polygonsOverlap(poly1, poly2, tolerance = 0.1) {
+        const axes = [];
         
-        // Draw a background so you can see the canvas
+        for (let i = 0; i < poly1.length; i++) {
+            const p1 = poly1[i];
+            const p2 = poly1[(i + 1) % poly1.length];
+            const edge = { x: p2.x - p1.x, y: p2.y - p1.y };
+            axes.push({ x: -edge.y, y: edge.x });
+        }
+        
+        for (let i = 0; i < poly2.length; i++) {
+            const p1 = poly2[i];
+            const p2 = poly2[(i + 1) % poly2.length];
+            const edge = { x: p2.x - p1.x, y: p2.y - p1.y };
+            axes.push({ x: -edge.y, y: edge.x });
+        }
+        
+        for (let axis of axes) {
+            const proj1 = this.projectPolygon(poly1, axis);
+            const proj2 = this.projectPolygon(poly2, axis);
+            
+            const gap = Math.min(proj2.min - proj1.max, proj1.min - proj2.max);
+            
+            if (gap > tolerance) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    projectPolygon(vertices, axis) {
+        let min = Infinity;
+        let max = -Infinity;
+        
+        for (let v of vertices) {
+            const projection = v.x * axis.x + v.y * axis.y;
+            min = Math.min(min, projection);
+            max = Math.max(max, projection);
+        }
+        
+        return { min, max };
+    }
+    
+    updateStatus() {
+        const lockedCount = this.lockedTiles.size;
+        const unlockedCount = this.tiles.length - lockedCount;
+        this.statusDiv.textContent = `Total: ${this.tiles.length} tiles (${lockedCount} locked, ${unlockedCount} unlocked)`;
+        
+        let log = '';
+        for (let i = 0; i < this.tiles.length; i++) {
+            const tile = this.tiles[i];
+            const color = tile.color === Tile.DARK_BLUE ? 'DARK' : 'LIGHT';
+            const locked = this.lockedTiles.has(i) ? '🔒 ' : '   ';
+            
+            if (i === 0) {
+                log += `${locked}0. ROOT [${color}]\n`;
+            } else {
+                log += `${locked}${i}. Parent:${tile.parentIndex} Edge:${tile.parentEdge} → Src:${tile.sourceEdgeUsed}${tile.wasReversed ? 'R' : ''} [${color}]\n`;
+            }
+        }
+        
+        this.logDiv.textContent = log;
+    }
+    
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.fillStyle = '#f0f0f0';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw tiles
-        tiling.draw(this.ctx, 0);
+        this.tiling.draw(this.ctx, 0);
+        this.tiling.drawVertexLabels(this.ctx);
         
-        // Draw vertex labels
-        tiling.drawVertexLabels(this.ctx);
-        
-        // Draw edge numbers on the root tile for reference
-        this.drawEdgeNumbers();
+        this.drawTileNumbers();
     }
     
-    drawEdgeNumbers() {
-        if (!this.rootTile) return;
+    drawTileNumbers() {
+        this.ctx.fillStyle = 'white';
+        this.ctx.strokeStyle = 'black';
+        this.ctx.lineWidth = 3;
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
         
-        this.ctx.fillStyle = 'red';
-        this.ctx.font = 'bold 14px Arial';
-        
-        for (let i = 0; i < 14; i++) {
-            const v = this.rootTile.getVertex(i);
-            this.ctx.fillText(i.toString(), v.x - 5, v.y + 5);
+        for (let i = 0; i < this.tiles.length; i++) {
+            const tile = this.tiles[i];
+            const verts = this.getTransformedVertices(tile);
+            const centerX = verts.reduce((sum, v) => sum + v.x, 0) / verts.length;
+            const centerY = verts.reduce((sum, v) => sum + v.y, 0) / verts.length;
+            
+            const label = this.lockedTiles.has(i) ? `${i}🔒` : i.toString();
+            
+            this.ctx.strokeText(label, centerX, centerY);
+            this.ctx.fillText(label, centerX, centerY);
         }
     }
 }
