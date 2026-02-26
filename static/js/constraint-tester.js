@@ -349,7 +349,6 @@ class ConstraintTester {
     }
     
     clearUnlocked() {
-        // Keep only locked tiles
         const newTiles = [];
         const newTiling = new TilingSystem(this.geometry);
         
@@ -357,42 +356,26 @@ class ConstraintTester {
             if (this.lockedTiles.has(i)) {
                 const tile = this.tiles[i];
                 tile.tileIndex = newTiles.length;
-                
-                // Clean up occupied edges - remove references to unlocked tiles
-                if (tile.occupiedEdges) {
-                    tile.occupiedEdges = tile.occupiedEdges.filter(edge => {
-                        // Find the child tile that was on this edge
-                        for (let j = 0; j < this.tiles.length; j++) {
-                            if (this.tiles[j].parentIndex === i && 
-                                this.tiles[j].parentEdge === edge.rootEdge) {
-                                // Keep this edge only if the child is locked
-                                return this.lockedTiles.has(j);
-                            }
-                        }
-                        return edge.sourceEdge === -1;
-                    });
-                }
-                
+                tile.occupiedEdges = []; // reset completely
                 newTiles.push(tile);
                 newTiling.tiles.push(tile);
             }
         }
         
-        // Update locked tile indices
-        const newLockedTiles = new Set();
-        for (let i = 0; i < newTiles.length; i++) {
-            newLockedTiles.add(i);
-        }
-        
         this.tiles = newTiles;
         this.tiling = newTiling;
-        this.lockedTiles = newLockedTiles;
+        
+        // Rebuild locked indices
+        this.lockedTiles = new Set(newTiles.map((_, i) => i));
+        
+        // Re-run markSharedEdges for all locked tiles
+        for (const tile of this.tiles) {
+            this.markSharedEdges(tile);
+        }
         
         this.updateParentSelector();
         this.updateStatus();
         this.draw();
-        
-        console.log(`Cleared unlocked tiles. ${this.tiles.length} locked tiles remain.`);
     }
     
     reset() {
