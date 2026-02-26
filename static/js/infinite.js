@@ -197,7 +197,9 @@ class InfiniteExplorer {
     _buildCandidates(tile, rootEdge, parentIsFlipped) {
         const candidates = [];
     
-        for (const tryDarkBlue of [true, false]) {
+        const colorOptions = parentIsFlipped ? [false] : [true, false];
+    
+        for (const tryDarkBlue of colorOptions) {
             const desiredColor   = tryDarkBlue ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
             const desiredFlipped = tryDarkBlue;
             const reversedSource = (desiredFlipped === parentIsFlipped);

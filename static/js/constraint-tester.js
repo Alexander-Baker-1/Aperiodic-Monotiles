@@ -369,7 +369,7 @@ class ConstraintTester {
                                 return this.lockedTiles.has(j);
                             }
                         }
-                        return false;
+                        return edge.sourceEdge === -1;
                     });
                 }
                 
