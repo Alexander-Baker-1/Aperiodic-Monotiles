@@ -84,25 +84,19 @@ export class Tile {
     static createAttached(sourceEdge, targetTile, targetEdge, options = {}) {
         const { flipped = false, color = Tile.LIGHT_BLUE } = options;
         const geometry = targetTile.geometry;
-        
+    
         const [targetP1, targetP2] = targetTile.getEdge(targetEdge[0], targetEdge[1]);
-        
-        let transform;
+        const sv1 = geometry.vertices[sourceEdge[0]];
+        const sv2 = geometry.vertices[sourceEdge[1]];
+    
         if (!flipped) {
             const flipX = Matrix.flipX();
-            const v1 = flipX.transformPoint(geometry.vertices[sourceEdge[0]]);
-            const v2 = flipX.transformPoint(geometry.vertices[sourceEdge[1]]);
+            const v1 = flipX.transformPoint(sv1);
+            const v2 = flipX.transformPoint(sv2);
             const tempTransform = Matrix.matchEdge(v1, v2, targetP1, targetP2);
-            transform = tempTransform.multiply(flipX);
+            return new Tile(tempTransform.multiply(flipX), geometry, color);
         } else {
-            transform = Matrix.matchEdge(
-                geometry.vertices[sourceEdge[0]],
-                geometry.vertices[sourceEdge[1]],
-                targetP1,
-                targetP2
-            );
+            return new Tile(Matrix.matchEdge(sv1, sv2, targetP1, targetP2), geometry, color);
         }
-        
-        return new Tile(transform, geometry, color);
     }
 }

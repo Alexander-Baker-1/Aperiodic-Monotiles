@@ -100,11 +100,6 @@ class ConstraintTester {
             this.colorSelect.appendChild(option);
         }
         
-        // Auto-update reverse checkbox based on color
-        this.colorSelect.addEventListener('change', () => {
-            this.updateReverseCheckbox();
-        });
-        
         container.appendChild(this.colorSelect);
         container.appendChild(document.createElement('br'));
         container.appendChild(document.createElement('br'));
@@ -242,7 +237,7 @@ class ConstraintTester {
         
         const neighborColor = isFlipped ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
         const targetEdge = [rootEdge, (rootEdge + 1) % 14];
-        const source = reversed
+        const source = (reversed !== !isFlipped)
             ? [(sourceEdge + 1) % 14, sourceEdge]
             : [sourceEdge, (sourceEdge + 1) % 14];
         
@@ -258,12 +253,7 @@ class ConstraintTester {
             const det = neighbor.transform.values[0] * neighbor.transform.values[4] - 
                         neighbor.transform.values[1] * neighbor.transform.values[3];
             const actuallyFlipped = det < 0;
-            
-            if (actuallyFlipped !== isFlipped) {
-                alert(`⚠️ CHIRALITY MISMATCH!\n\nExpected: ${isFlipped ? 'FLIPPED' : 'UNFLIPPED'}\nGot: ${actuallyFlipped ? 'FLIPPED' : 'UNFLIPPED'}\n\nTry toggling the 'Reverse source edge' checkbox.`);
-                return;
-            }
-            
+                        
             // Check for overlap with ALL existing tiles
             if (this.checkOverlap(neighbor, parentTile)) {
                 alert(`⚠️ OVERLAP DETECTED!\n\nTile ${parentIndex}, Edge ${rootEdge} → Source ${sourceEdge}${reversed ? ' (reversed)' : ''} ${isFlipped ? 'FLIPPED' : 'UNFLIPPED'}\n\nOverlaps with existing tiles!`);

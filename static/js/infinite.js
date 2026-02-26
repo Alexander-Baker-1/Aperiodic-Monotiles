@@ -9,7 +9,6 @@ class InfiniteExplorer {
         this.ctx = this.canvas.getContext('2d');
         this.edgeConstraints = this.buildEdgeConstraints();
 
-        // Edge mapping tables
         this.neighborEdges = {
             false: {
                 false: {0:[5,11],1:[0,4,10],2:[3,9,13],3:[2,6,8,12],4:[1,5,11],
@@ -43,9 +42,6 @@ class InfiniteExplorer {
         return this.seed / 0x7fffffff;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  MAIN ENTRY
-    // ─────────────────────────────────────────────────────────────────────────
     generate() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -72,6 +68,12 @@ class InfiniteExplorer {
 
         tiling.addRootTile(rootTransform, rootColor);
         console.log(`🌱 Root tile: ${rootColor === Tile.DARK_BLUE ? 'DARK' : 'LIGHT'}`);
+        console.log(`Root color value: ${tiling.tiles[0].color}`);
+        console.log(`DARK_BLUE constant: ${Tile.DARK_BLUE}`);
+        console.log(`LIGHT_BLUE constant: ${Tile.LIGHT_BLUE}`);
+        console.log(`parentIsFlipped would be: ${tiling.tiles[0].color === Tile.DARK_BLUE}`);
+
+        this.rootTile = tiling.tiles[0];
 
         const TARGET_TILES = 100;
         this.backtrackingFill(tiling, TARGET_TILES);
@@ -83,39 +85,9 @@ class InfiniteExplorer {
         this.drawTileNumbers(tiling);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  BACKTRACKING BFS FILL
-    //
-    //  Model
-    //  -----
-    //  The "frontier" is a queue of EXPANSION OPPORTUNITIES — (tile, edge) pairs
-    //  where we *could* place a new neighbor. Open edges with no valid placements
-    //  are simply skipped/discarded; they don't cause backtracking (the hat
-    //  tiling is NOT a constraint where every edge must have a neighbor).
-    //
-    //  Backtracking is triggered only when we've placed a tile and then a
-    //  *later* placement attempt is completely stuck — meaning the frontier is
-    //  non-empty but every remaining entry has exhausted all candidates AND we
-    //  haven't hit the target yet.  We then undo the last committed placement
-    //  and try its next candidate.
-    //
-    //  The stack tracks every committed placement so we can undo in LIFO order.
-    //  Each stack frame stores:
-    //    - which frontier entry triggered it (so we can re-insert it)
-    //    - which frontier entries were ADDED by this placement (so we remove them)
-    //    - the placed tile and its parent's occupiedEdge entry (for clean undo)
-    // ─────────────────────────────────────────────────────────────────────────
     backtrackingFill(tiling, targetCount) {
-
-        // frontier: array of { tile, rootEdge, candidates[], nextIdx }
-        // Each entry is one open edge on an existing tile that we can try to fill.
         const frontier = [];
-
-        // Seed the frontier with all edges of the root tile
         this._addToFrontier(tiling.tiles[0], tiling, frontier);
-
-        // stack: one frame per committed tile placement
-        // { srcEntry, srcEntryIdx, placedTile, placedIndex, occupiedEntry, addedFrontierCount }
         const stack = [];
 
         let iters = 0;
@@ -124,33 +96,17 @@ class InfiniteExplorer {
         while (tiling.tiles.length < targetCount) {
             if (++iters > MAX_ITERS) { console.warn('Max iters hit'); break; }
 
-            // ── Discard exhausted / already-filled frontier entries ──
             this._cleanFrontier(frontier);
 
             if (frontier.length === 0) {
-                // No more expansion opportunities
-                if (stack.length === 0) break;  // truly stuck, nothing to undo
-                // Backtrack — undo last placement and try its next candidate
+                if (stack.length === 0) break;
                 this._undo(stack, frontier, tiling);
                 continue;
             }
 
-            // ── Pick the best frontier entry (BFS-wave order; ties broken by fewest candidates) ──
-            // Simple strategy: just pick index 0 (entries are appended in BFS order,
-            // so front = oldest = innermost ring). This gives natural outward fill.
-            // For smarter MRV, uncomment the block below.
             const entryIdx = 0;
-            /*
-            // MRV: pick entry with fewest remaining candidates
-            let entryIdx = 0, fewest = Infinity;
-            for (let i = 0; i < frontier.length; i++) {
-                const rem = frontier[i].candidates.length - frontier[i].nextIdx;
-                if (rem < fewest) { fewest = rem; entryIdx = i; }
-            }
-            */
             const entry = frontier[entryIdx];
 
-            // ── Try candidates for this entry until one geometrically succeeds ──
             let placed = null;
             let usedCandidate = null;
             {
@@ -158,17 +114,14 @@ class InfiniteExplorer {
                 while ((candidate = this._nextValidCandidate(entry, tiling)) !== null) {
                     const result = this._tryPlace(entry, candidate, tiling);
                     if (result) { placed = result; usedCandidate = candidate; break; }
-                    // geometry failed → _nextValidCandidate will advance to next on next call
                 }
             }
 
             if (!placed) {
-                // Exhausted all candidates for this entry — drop it (not mandatory to fill)
                 frontier.splice(entryIdx, 1);
                 continue;
             }
 
-            // ── Commit placement ──
             const { neighbor, occupiedEntry } = placed;
             const newIndex = tiling.tiles.length;
 
@@ -185,14 +138,9 @@ class InfiniteExplorer {
             }];
 
             tiling.tiles.push(neighbor);
-
-            // Remove the frontier entry we just consumed
             frontier.splice(entryIdx, 1);
-
-            // Add new frontier entries for the neighbor's open edges
             this._addToFrontier(neighbor, tiling, frontier);
 
-            // Push undo frame
             stack.push({
                 srcEntry:    entry,
                 srcEntryIdx: entryIdx,
@@ -203,49 +151,34 @@ class InfiniteExplorer {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Undo the most recent committed placement
-    // ─────────────────────────────────────────────────────────────────────────
     _undo(stack, frontier, tiling) {
         const frame = stack.pop();
         const { srcEntry, srcEntryIdx, placedTile, placedIndex, occupiedEntry } = frame;
 
-        // Remove tile (must be last in array for splice-by-index to be safe)
         tiling.tiles.splice(placedIndex, 1);
 
-        // Remove occupied edge from parent
         const parent = srcEntry.tile;
         if (parent.occupiedEdges) {
             const oi = parent.occupiedEdges.indexOf(occupiedEntry);
             if (oi >= 0) parent.occupiedEdges.splice(oi, 1);
         }
 
-        // Remove frontier entries that belong to the undone tile (by identity)
         for (let i = frontier.length - 1; i >= 0; i--) {
             if (frontier[i].tile === placedTile) frontier.splice(i, 1);
         }
 
-        // Re-insert the source entry so we try its next candidate
-        // (nextIdx was already advanced past the failed candidate by _nextValidCandidate)
         frontier.splice(Math.min(srcEntryIdx, frontier.length), 0, srcEntry);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Remove frontier entries whose edge is now occupied or fully exhausted
-    // ─────────────────────────────────────────────────────────────────────────
     _cleanFrontier(frontier) {
         for (let i = frontier.length - 1; i >= 0; i--) {
             const f = frontier[i];
-            // Drop if the tile's edge is already filled
             if (f.tile.occupiedEdges?.some(n => n.rootEdge === f.rootEdge)) {
                 frontier.splice(i, 1);
             }
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Add frontier entries for all open edges of a tile
-    // ─────────────────────────────────────────────────────────────────────────
     _addToFrontier(tile, tiling, frontier) {
         const parentIsFlipped = (tile.color === Tile.DARK_BLUE);
         const occupied = tile.occupiedEdges || [];
@@ -255,87 +188,77 @@ class InfiniteExplorer {
 
             const candidates = this._buildCandidates(tile, rootEdge, parentIsFlipped);
 
-            // Only add if there's at least one possible candidate
             if (candidates.length > 0) {
                 frontier.push({ tile, rootEdge, candidates, nextIdx: 0 });
             }
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Build the shuffled candidate list for a (tile, rootEdge) slot
-    // ─────────────────────────────────────────────────────────────────────────
     _buildCandidates(tile, rootEdge, parentIsFlipped) {
         const candidates = [];
-
+    
         for (const tryDarkBlue of [true, false]) {
             const desiredColor   = tryDarkBlue ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
             const desiredFlipped = tryDarkBlue;
             const reversedSource = (desiredFlipped === parentIsFlipped);
-
+    
             const validSources = this.neighborEdges[parentIsFlipped][desiredFlipped][rootEdge];
             if (!validSources?.length) continue;
-
+    
             for (const sourceEdgeNum of validSources) {
                 for (const flippedParam of [true, false]) {
                     candidates.push({ rootEdge, sourceEdgeNum, desiredColor, desiredFlipped, flippedParam, reversedSource });
                 }
             }
         }
-
-        // Shuffle
+    
         for (let i = candidates.length - 1; i > 0; i--) {
             const j = Math.floor(this.seededRandom() * (i + 1));
             [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
         }
-
+    
         return candidates;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Advance through an entry's candidates until one passes constraint checks
-    //  Returns the candidate, or null if all exhausted.
-    //  NOTE: does NOT attempt geometry — that happens in _tryPlace.
-    // ─────────────────────────────────────────────────────────────────────────
     _nextValidCandidate(entry, tiling) {
+        const isRoot = entry.tile === this.rootTile;
         while (entry.nextIdx < entry.candidates.length) {
             const c = entry.candidates[entry.nextIdx++];
-            if (this.canPlaceWithConstraints(entry.tile, c.rootEdge, c.sourceEdgeNum, c.reversedSource, c.flippedParam)) {
-                return c;
+            const ok = this.canPlaceWithConstraints(entry.tile, c.rootEdge, c.sourceEdgeNum, c.reversedSource, c.flippedParam);
+            if (!ok && isRoot) {
+                console.log(`ROOT Edge ${entry.rootEdge}: blocked src=${c.sourceEdgeNum} rev=${c.reversedSource} flip=${c.flippedParam}`);
             }
+            if (ok) return c;
+        }
+        if (isRoot) {
+            console.log(`ROOT Edge ${entry.rootEdge}: ALL ${entry.candidates.length} candidates exhausted`);
         }
         return null;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Attempt to geometrically place a candidate. Returns {neighbor, occupiedEntry} or null.
-    // ─────────────────────────────────────────────────────────────────────────
     _tryPlace(entry, candidate, tiling) {
         const { rootEdge, sourceEdgeNum, desiredColor, desiredFlipped, flippedParam, reversedSource } = candidate;
-
+    
         const sourceEdge = reversedSource
             ? [(sourceEdgeNum + 1) % 14, sourceEdgeNum]
             : [sourceEdgeNum, (sourceEdgeNum + 1) % 14];
         const targetEdge = [rootEdge, (rootEdge + 1) % 14];
-
+    
         const neighbor = Tile.createAttached(sourceEdge, entry.tile, targetEdge, { flipped: flippedParam, color: desiredColor });
         if (!neighbor?.transform) return null;
-
+    
         const det = neighbor.transform.values[0] * neighbor.transform.values[4]
                   - neighbor.transform.values[1] * neighbor.transform.values[3];
         if ((det < 0) !== desiredFlipped) return null;
-
+    
         neighbor.color = desiredColor;
-
+    
         if (this.hasGeometricConflict(neighbor, tiling.tiles, entry.tile)) return null;
-
+    
         const occupiedEntry = { rootEdge, sourceEdge: sourceEdgeNum, reversed: reversedSource, flipped: flippedParam };
         return { neighbor, occupiedEntry };
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Constraint / geometry helpers  (unchanged from original)
-    // ─────────────────────────────────────────────────────────────────────────
     canPlaceWithConstraints(tile, rootEdge, sourceEdge, reversed, flipped) {
         if (!tile.occupiedEdges) tile.occupiedEdges = [];
 
@@ -464,9 +387,21 @@ class InfiniteExplorer {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Edge constraints table (unchanged from original)
-    // ─────────────────────────────────────────────────────────────────────────
+    _centroid(verts) {
+        return {
+            x: verts.reduce((s, v) => s + v.x, 0) / verts.length,
+            y: verts.reduce((s, v) => s + v.y, 0) / verts.length
+        };
+    }
+
+    _onOppositeSides(edgeP1, edgeP2, pointA, pointB) {
+        const dx = edgeP2.x - edgeP1.x;
+        const dy = edgeP2.y - edgeP1.y;
+        const signA = Math.sign(dx * (pointA.y - edgeP1.y) - dy * (pointA.x - edgeP1.x));
+        const signB = Math.sign(dx * (pointB.y - edgeP1.y) - dy * (pointB.x - edgeP1.x));
+        return signA !== 0 && signB !== 0 && signA !== signB;
+    }
+
     buildEdgeConstraints() {
         return {
             0: {
@@ -562,7 +497,6 @@ class InfiniteExplorer {
     }
 }
 
-// ── Bootstrap ──────────────────────────────────────────────────────────────
 const explorer = new InfiniteExplorer('canvas');
 
 window.regenerate  = () => {
