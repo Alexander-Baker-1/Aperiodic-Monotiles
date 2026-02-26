@@ -238,23 +238,45 @@ class InfiniteExplorer {
 
     _tryPlace(entry, candidate, tiling) {
         const { rootEdge, sourceEdgeNum, desiredColor, desiredFlipped, flippedParam, reversedSource } = candidate;
-    
+        const isRoot = entry.tile === this.rootTile;
+
         const sourceEdge = reversedSource
             ? [(sourceEdgeNum + 1) % 14, sourceEdgeNum]
             : [sourceEdgeNum, (sourceEdgeNum + 1) % 14];
         const targetEdge = [rootEdge, (rootEdge + 1) % 14];
-    
+
         const neighbor = Tile.createAttached(sourceEdge, entry.tile, targetEdge, { flipped: flippedParam, color: desiredColor });
-        if (!neighbor?.transform) return null;
-    
+        if (!neighbor?.transform) {
+            if (isRoot) console.log(`ROOT Edge ${rootEdge}: no transform`);
+            return null;
+        }
+
         const det = neighbor.transform.values[0] * neighbor.transform.values[4]
                   - neighbor.transform.values[1] * neighbor.transform.values[3];
-        if ((det < 0) !== desiredFlipped) return null;
-    
+        if ((det < 0) !== desiredFlipped) {
+            if (isRoot) console.log(`ROOT Edge ${rootEdge} src=${sourceEdgeNum} rev=${reversedSource} flip=${flippedParam}: det failed det=${det.toFixed(0)} want=${desiredFlipped}`);
+            return null;
+        }
+
+        const centroid = this._centroid(this.getTransformedVertices(neighbor));
+        const parentCentroid = this._centroid(this.getTransformedVertices(entry.tile));
+        const edgeP1 = entry.tile.getVertex(rootEdge);
+        const edgeP2 = entry.tile.getVertex(rootEdge === 13 ? 14 : rootEdge + 1);
+
+        if (!this._onOppositeSides(edgeP1, edgeP2, centroid, parentCentroid)) {
+            if (isRoot) console.log(`ROOT Edge ${rootEdge} src=${sourceEdgeNum} rev=${reversedSource} flip=${flippedParam}: wrong side`);
+            return null;
+        }
+
         neighbor.color = desiredColor;
-    
-        if (this.hasGeometricConflict(neighbor, tiling.tiles, entry.tile)) return null;
-    
+
+        if (this.hasGeometricConflict(neighbor, tiling.tiles, entry.tile)) {
+            if (isRoot) console.log(`ROOT Edge ${rootEdge} src=${sourceEdgeNum} rev=${reversedSource} flip=${flippedParam}: geometric conflict`);
+            return null;
+        }
+
+        if (isRoot) console.log(`ROOT Edge ${rootEdge} src=${sourceEdgeNum} rev=${reversedSource} flip=${flippedParam}: ✅ PLACED`);
+
         const occupiedEntry = { rootEdge, sourceEdge: sourceEdgeNum, reversed: reversedSource, flipped: flippedParam };
         return { neighbor, occupiedEntry };
     }

@@ -163,16 +163,20 @@ class ConstraintTester {
         
         const scaling = Matrix.scale(30);
         const translation = Matrix.translation(400, 300);
-        const flip = Matrix.flipX();
-        
-        // Start with a dark blue (flipped) root tile
-        const baseTransform = translation.multiply(flip).multiply(scaling);
-        const rootTile = this.tiling.addRootTile(baseTransform, Tile.DARK_BLUE);
+    
+        // IMPORTANT: no manual flip here
+        const baseTransform = translation.multiply(scaling);
+    
+        const rootTile = this.tiling.addRootTile(
+            baseTransform,
+            Tile.DARK_BLUE // color determines chirality
+        );
+    
         rootTile.occupiedEdges = [];
         rootTile.tileIndex = 0;
-        
+    
         this.tiles = [rootTile];
-        
+    
         this.updateParentSelector();
         this.updateStatus();
         this.draw();
@@ -208,7 +212,7 @@ class ConstraintTester {
             this.rootEdgeSelect.appendChild(option);
         }
         
-        this.updateReverseCheckbox();
+        // this.updateReverseCheckbox();
     }
     
     updateReverseCheckbox() {
@@ -237,7 +241,7 @@ class ConstraintTester {
         
         const neighborColor = isFlipped ? Tile.DARK_BLUE : Tile.LIGHT_BLUE;
         const targetEdge = [rootEdge, (rootEdge + 1) % 14];
-        const source = (reversed !== !isFlipped)
+        const source = reversed
             ? [(sourceEdge + 1) % 14, sourceEdge]
             : [sourceEdge, (sourceEdge + 1) % 14];
         
@@ -246,7 +250,7 @@ class ConstraintTester {
                 source,
                 parentTile,
                 targetEdge,
-                { flipped: reversed, color: neighborColor }
+                { flipped: isFlipped, color: neighborColor }
             );
             
             // Verify chirality
@@ -255,10 +259,10 @@ class ConstraintTester {
             const actuallyFlipped = det < 0;
                         
             // Check for overlap with ALL existing tiles
-            if (this.checkOverlap(neighbor, parentTile)) {
-                alert(`⚠️ OVERLAP DETECTED!\n\nTile ${parentIndex}, Edge ${rootEdge} → Source ${sourceEdge}${reversed ? ' (reversed)' : ''} ${isFlipped ? 'FLIPPED' : 'UNFLIPPED'}\n\nOverlaps with existing tiles!`);
-                return;
-            }
+            // if (this.checkOverlap(neighbor, parentTile)) {
+            //     alert(`⚠️ OVERLAP DETECTED!\n\nTile ${parentIndex}, Edge ${rootEdge} → Source ${sourceEdge}${reversed ? ' (reversed)' : ''} ${isFlipped ? 'FLIPPED' : 'UNFLIPPED'}\n\nOverlaps with existing tiles!`);
+            //     return;
+            // }
             
             // Success! Add the neighbor
             neighbor.occupiedEdges = [];
@@ -278,6 +282,7 @@ class ConstraintTester {
             
             this.tiles.push(neighbor);
             this.tiling.tiles.push(neighbor);
+            this.markSharedEdges(neighbor);
             
             this.updateParentSelector();
             this.updateStatus();
@@ -285,6 +290,52 @@ class ConstraintTester {
             
         } catch (error) {
             alert(`Error placing neighbor: ${error.message}`);
+        }
+    }
+
+    markSharedEdges(newTile) {
+        const newVerts = this.getTransformedVertices(newTile);
+        
+        for (const existingTile of this.tiles) {
+            if (existingTile === newTile) continue;
+            const exVerts = this.getTransformedVertices(existingTile);
+            
+            for (let e = 0; e < 14; e++) {
+                const ep1 = exVerts[e];
+                const ep2 = exVerts[(e + 1) % 14];
+                
+                // Check if both vertices of this edge are shared with newTile
+                const v1shared = newVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < 1.0);
+                const v2shared = newVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < 1.0);
+                
+                if (v1shared && v2shared) {
+                    if (!existingTile.occupiedEdges) existingTile.occupiedEdges = [];
+                    if (!existingTile.occupiedEdges.some(oe => oe.rootEdge === e)) {
+                        existingTile.occupiedEdges.push({ rootEdge: e, sourceEdge: -1, reversed: false, flipped: false });
+                    }
+                }
+            }
+        }
+
+        // Also mark edges on the new tile that are shared with existing tiles
+        for (let e = 0; e < 14; e++) {
+            const ep1 = newVerts[e];
+            const ep2 = newVerts[(e + 1) % 14];
+            
+            for (const existingTile of this.tiles) {
+                if (existingTile === newTile) continue;
+                const exVerts = this.getTransformedVertices(existingTile);
+                
+                const v1shared = exVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < 1.0);
+                const v2shared = exVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < 1.0);
+                
+                if (v1shared && v2shared) {
+                    if (!newTile.occupiedEdges) newTile.occupiedEdges = [];
+                    if (!newTile.occupiedEdges.some(oe => oe.rootEdge === e)) {
+                        newTile.occupiedEdges.push({ rootEdge: e, sourceEdge: -1, reversed: false, flipped: false });
+                    }
+                }
+            }
         }
     }
     
@@ -380,7 +431,7 @@ class ConstraintTester {
     }
     
     countSharedVertices(verts1, verts2) {
-        const tolerance = 0.05;
+        const tolerance = 1.0;
         let count = 0;
         for (let v1 of verts1) {
             for (let v2 of verts2) {
