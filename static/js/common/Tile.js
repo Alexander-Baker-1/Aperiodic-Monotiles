@@ -1,102 +1,83 @@
-import { Matrix } from './Matrix.js';
+import { Transform } from './Transform.js';
 
 export class Tile {
-    // Color constants as static properties
-    static DARK_BLUE = 'rgba(0, 137, 212, 1)';
-    static LIGHT_BLUE = 'rgba(148, 205, 235, 1)';
-    static WHITE = 'rgba(250, 250, 250, 1)';
-    static GRAY = 'rgba(191, 191, 191, 1)';
-    
-    constructor(transform, geometry, color = Tile.LIGHT_BLUE) {
-        this.transform = transform;
-        this.geometry = geometry;
-        this.color = color;
+    // 1. COLOR "ENUMS" (Static constants shared by all Tiles)
+    static COLORS = {
+        DARK_BLUE: 'rgba(0, 137, 212, 1)',
+        LIGHT_BLUE: 'rgba(148, 205, 235, 1)',
+        WHITE: 'rgba(250, 250, 250, 1)',
+        GRAY: 'rgba(191, 191, 191, 1)'
+    };
+
+    constructor(geometry, transform, color = Tile.COLORS.LIGHT_BLUE) {
+        this.geometry = geometry;   // The Stencil (Math)
+        this.transform = transform; // The Hand (Position/Pose)
+        this.color = color;         // The Paint
     }
-    
-    getVertex(index) {
-        return this.transform.transformPoint(this.geometry.vertices[index]);
-    }
-    
-    getEdge(v1Index, v2Index) {
-        return [this.getVertex(v1Index), this.getVertex(v2Index)];
-    }
-    
-    draw(ctx, curve) {
-        const moves = this.geometry.getEdgeMoves();
-        
-        function twiddle([dx, dy]) {
-            const [nx, ny] = [dy, -dx];
-            return [
-                -curve*nx + dx/2, -curve*ny + dy/2,
-                curve*nx + dx/2, curve*ny + dy/2,
-                dx, dy
-            ];
-        }
-        
+
+    /**
+     * PURPOSE: The "Main Engine". It prepares the canvas, coordinates 
+     * the drawing, and cleans up afterward.
+     */
+    render(ctx, curve) {
         ctx.save();
         const [a, b, c, d, e, f] = this.transform.values;
         ctx.transform(a, d, b, e, c, f);
+    
+        this.tracePath(ctx, curve);
         
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        
-        let px = 0, py = 0;
-        for (let [dx, dy] of moves) {
-            const [dx1, dy1, dx2, dy2, x1, y1] = twiddle([dx, dy]);
-            ctx.bezierCurveTo(dx1+px, dy1+py, dx2+px, dy2+py, px+dx, py+dy);
-            px += dx;
-            py += dy;
-        }
-        
-        ctx.closePath();
-        
-        // Fill the tile
         ctx.fillStyle = this.color;
         ctx.fill();
         
-        // Add black outline
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 0.025;
-        ctx.stroke();
+        // The stroke must happen while the transform is applied
+        // so it uses the '2 / scale' width correctly.
+        ctx.stroke(); 
         
         ctx.restore();
     }
-    
-    drawVertexLabels(ctx) {
-        ctx.save();
-        ctx.fillStyle = 'black';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+
+    /**
+     * PURPOSE: The "Pathfinder". It iterates through the geometry's instructions 
+     * to build the outline of the shape.
+     */
+    tracePath(ctx, curve) {
+        const moves = this.geometry.edgeMoves;
+        ctx.beginPath();
+        ctx.moveTo(0, 0); // Start at the origin of the local coordinate system
         
-        for (let i = 0; i < this.geometry.vertices.length; i++) {
-            const p = this.getVertex(i);
-            ctx.fillText(i, p.x, p.y);
+        let px = 0, py = 0;
+        for (let [dx, dy] of moves) {
+            this.drawEdge(ctx, px, py, dx, dy, curve);
+            px += dx; // Update current position relative to the previous move
+            py += dy;
         }
+        ctx.closePath();
+    }
+
+    /**
+     * PURPOSE: The "Artist". It calculates how to turn a straight line 
+     * into a smooth Bezier curve based on a "twiddle" factor.
+     */
+    drawEdge(ctx, x, y, dx, dy, curve) {
+        // Calculate the "Normal" (a vector sticking out sideways from the edge)
+        const nx = dy; 
+        const ny = -dx;
         
-        ctx.restore();
+        // Control Points: These "pull" the line outward to create the curve
+        const cp1x = x - curve * nx + dx / 2;
+        const cp1y = y - curve * ny + dy / 2;
+        const cp2x = x + curve * nx + dx / 2;
+        const cp2y = y + curve * ny + dy / 2;
+        
+        // Draw the cubic bezier from current (x,y) to the destination (x+dx, y+dy)
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x + dx, y + dy);
     }
-    
-    static createRoot(geometry, transform, color) {
-        return new Tile(transform, geometry, color);
-    }
-    
-    static createAttached(sourceEdge, targetTile, targetEdge, options = {}) {
-        const { flipped = false, color = Tile.LIGHT_BLUE } = options;
-        const geometry = targetTile.geometry;
-    
-        const [targetP1, targetP2] = targetTile.getEdge(targetEdge[0], targetEdge[1]);
-        const sv1 = geometry.vertices[sourceEdge[0]];
-        const sv2 = geometry.vertices[sourceEdge[1]];
-    
-        if (!flipped) {
-            const flipX = Matrix.flipX();
-            const v1 = flipX.transformPoint(sv1);
-            const v2 = flipX.transformPoint(sv2);
-            const tempTransform = Matrix.matchEdge(v1, v2, targetP1, targetP2);
-            return new Tile(tempTransform.multiply(flipX), geometry, color);
-        } else {
-            return new Tile(Matrix.matchEdge(sv1, sv2, targetP1, targetP2), geometry, color);
-        }
+
+    /**
+     * PURPOSE: The "GPS". Translates a local point on the stencil 
+     * into an actual pixel coordinate on the screen.
+     */
+    getVertexWorldPos(index) {
+        return this.transform.transformPoint(this.geometry.vertices[index]);
     }
 }

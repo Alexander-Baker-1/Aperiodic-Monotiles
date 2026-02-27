@@ -1,6 +1,9 @@
 import { HatGeometry } from './common/HatGeometry.js';
+import { Tile } from './common/Tile.js';
+import { Transform } from './common/Transform.js';
 
 class SingleTileApp {
+    // Presets for the different aperiodic variations
     static PRESETS = {
         chevron: { a: 0, b: 1, name: 'Chevron' },
         hat: { a: 1, b: Math.sqrt(3), name: 'Hat' },
@@ -52,87 +55,71 @@ class SingleTileApp {
         document.getElementById('curve-val').textContent = parseFloat(this.curveSlider.value).toFixed(3);
     }
     
+    /**
+     * Calculates the best scale to fit the tile on screen.
+     * Adjusted to handle the 90-degree rotation.
+     */
     calculateScale(a, b) {
         const COS_60 = Math.cos(Math.PI/3);
         const SIN_60 = Math.sin(Math.PI/3);
         
-        const width = (1 + COS_60) * b + 2 * SIN_60 * a;
-        const height = 2 * SIN_60 * b + 2 * (1 + COS_60) * a;
+        // Calculate raw dimensions
+        let width = (1 + COS_60) * b + 2 * SIN_60 * a;
+        let height = 2 * SIN_60 * b + 2 * (1 + COS_60) * a;
         
-        const margin = 0.2;
-        const scaleX = (this.displayWidth * (1 - 2 * margin)) / width;
-        const scaleY = (this.displayHeight * (1 - 2 * margin)) / height;
-        const scale = Math.min(scaleX, scaleY);
+        // If width or height is 0, we use a default "standard" size 
+        // so we don't divide by zero.
+        const minDim = 0.5; 
+        const safeWidth = Math.max(width, minDim);
+        const safeHeight = Math.max(height, minDim);
         
-        return {
-            scale: scale,
-            xOffset: (width / 2) * scale,
-        };
-    }
-    
-    makeControlPoints(dx, dy, curveAmount) {
-        const nx = dy;
-        const ny = -dx;
+        const margin = 0.3;
+        const scaleX = (this.displayWidth * (1 - 2 * margin)) / safeHeight;
+        const scaleY = (this.displayHeight * (1 - 2 * margin)) / safeWidth;
         
-        return [
-            -curveAmount * nx + dx/2,
-            -curveAmount * ny + dy/2,
-            curveAmount * nx + dx/2,
-            curveAmount * ny + dy/2,
-            dx,
-            dy
-        ];
+        return Math.min(scaleX, scaleY);
     }
     
     draw() {
+        // 1. Clear everything
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
         
         const a = parseFloat(this.aSlider.value);
         const b = parseFloat(this.bSlider.value);
         const curve = parseFloat(this.curveSlider.value);
         
-        const geometry = new HatGeometry(a, b);
-        const edges = geometry.getEdgeMoves();
-        
-        const { scale, xOffset } = this.calculateScale(a, b);
-        
+        // 2. Calculate scale with a "Cap"
+        // This prevents the scale from becoming Infinity when a and b are 0
+        const scale = this.calculateScale(a, b);
+    
+        // 3. Setup the pose
         const centerX = this.displayWidth / 2;
         const centerY = this.displayHeight / 2;
+        const verticalVisualOffset = (scale * (a + b)) / 2; 
         
-        let x = centerX - xOffset;
-        let y = centerY;
+        const pose = Transform.identity()
+            .translate(centerX, centerY - verticalVisualOffset)
+            .rotate(Math.PI / 2) 
+            .multiply(Transform.scale(scale));
         
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y);
+        const geometry = new HatGeometry(a, b);
+        const tile = new Tile(geometry, pose, Tile.COLORS.LIGHT_BLUE);
         
-        edges.forEach(([dx, dy]) => {
-            const scaledDx = dx * scale;
-            const scaledDy = dy * scale;
-            
-            if (curve > 0) {
-                const [cp1x, cp1y, cp2x, cp2y, endX, endY] = 
-                    this.makeControlPoints(scaledDx, scaledDy, curve);
-                
-                this.ctx.bezierCurveTo(
-                    x + cp1x, y + cp1y,
-                    x + cp2x, y + cp2y,
-                    x + endX, y + endY
-                );
-            } else {
-                this.ctx.lineTo(x + scaledDx, y + scaledDy);
-            }
-            
-            x += scaledDx;
-            y += scaledDy;
-        });
+        // 4. THE FIX: Set the line width relative to the scale
+        // We want it to be ~2 pixels on the screen. 
+        // So we divide 2 by the current zoom level (scale).
+        this.ctx.lineWidth = 2 / scale; 
         
-        this.ctx.closePath();
-        this.ctx.fillStyle = 'black';
-        this.ctx.fill();
+        // Ensure we don't divide by zero if scale is somehow 0
+        if (!isFinite(this.ctx.lineWidth)) this.ctx.lineWidth = 1;
+    
+        this.ctx.lineJoin = 'round';
+        this.ctx.lineCap = 'round';
         
-        this.ctx.strokeStyle = '#333';
-        this.ctx.lineWidth = 1;
-        this.ctx.stroke();
+        tile.render(this.ctx, curve);
     }
     
     loadPreset(presetKey) {

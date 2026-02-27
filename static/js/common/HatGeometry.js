@@ -7,17 +7,7 @@ export class HatGeometry {
     }
     
     computeVertices() {
-        const c = Math.cos(Math.PI/3);
-        const s = Math.sin(Math.PI/3);
-        const {a, b} = this;
-        
-        const moves = [
-            [c*b, s*b], [b, 0], [0, a], [s*a, c*a],
-            [c*b, -s*b], [-c*b, -s*b], [s*a, -c*a],
-            [0, -a], [0, -a], [-s*a, -c*a],
-            [-c*b, s*b], [-b, 0], [0, a], [-s*a, c*a]
-        ];
-        
+        const moves = this.getEdgeMoves(); // Use the getter to keep it DRY
         const vertices = [{x: 0, y: 0}];
         let x = 0, y = 0;
         
@@ -35,11 +25,12 @@ export class HatGeometry {
         const s = Math.sin(Math.PI/3);
         const {a, b} = this;
         
+        // MIRRORED VERSION: All original x-values (dx) are multiplied by -1
         return [
-            [c*b, s*b], [b, 0], [0, a], [s*a, c*a],
-            [c*b, -s*b], [-c*b, -s*b], [s*a, -c*a],
-            [0, -a], [0, -a], [-s*a, -c*a],
-            [-c*b, s*b], [-b, 0], [0, a], [-s*a, c*a]
+            [-c*b, s*b], [-b, 0], [0, a], [-s*a, c*a],
+            [-c*b, -s*b], [c*b, -s*b], [-s*a, -c*a],
+            [0, -a], [0, -a], [s*a, -c*a],
+            [c*b, s*b], [b, 0], [0, a], [s*a, c*a]
         ];
     }
 }
