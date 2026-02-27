@@ -75,7 +75,7 @@ class InfiniteExplorer {
 
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 7;
+        const TARGET_TILES = 8;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         console.log(`✅ Final tile count: ${tiling.tiles.length}`);
@@ -406,7 +406,7 @@ class InfiniteExplorer {
             if (!this.bboxesOverlap(newBBox, exBBox)) continue;
             
             const shared = this.countSharedVertices(newVerts, exVerts);
-            if (shared > 4) return true;
+            if (shared >= 5) return true; // too many = genuine overlap
             if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
         }
         return false;
@@ -433,18 +433,25 @@ class InfiniteExplorer {
 
     polygonsOverlap(poly1, poly2, tolerance = 0.1) {
         const axes = [];
-        for (let i = 0; i < poly1.length; i++) {
-            const e = { x: poly1[(i+1)%poly1.length].x - poly1[i].x, y: poly1[(i+1)%poly1.length].y - poly1[i].y };
-            axes.push({ x: -e.y, y: e.x });
+        const len1 = poly1.length - 1;
+        const len2 = poly2.length - 1;
+        
+        for (let i = 0; i < len1; i++) {
+            const dx = poly1[(i+1)%len1].x - poly1[i].x;
+            const dy = poly1[(i+1)%len1].y - poly1[i].y;
+            if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) continue;
+            axes.push({ x: -dy, y: dx });
         }
-        for (let i = 0; i < poly2.length; i++) {
-            const e = { x: poly2[(i+1)%poly2.length].x - poly2[i].x, y: poly2[(i+1)%poly2.length].y - poly2[i].y };
-            axes.push({ x: -e.y, y: e.x });
+        for (let i = 0; i < len2; i++) {
+            const dx = poly2[(i+1)%len2].x - poly2[i].x;
+            const dy = poly2[(i+1)%len2].y - poly2[i].y;
+            if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) continue;
+            axes.push({ x: -dy, y: dx });
         }
         for (const axis of axes) {
-            const p1 = this.projectPolygon(poly1, axis);
-            const p2 = this.projectPolygon(poly2, axis);
-            if (Math.min(p2.min - p1.max, p1.min - p2.max) > tolerance) return false;
+            const p1 = this.projectPolygon(poly1.slice(0, len1), axis);
+            const p2 = this.projectPolygon(poly2.slice(0, len2), axis);
+            if (Math.max(p2.min - p1.max, p1.min - p2.max) > 0) return false;
         }
         return true;
     }
