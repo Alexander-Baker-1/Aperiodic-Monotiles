@@ -72,7 +72,7 @@ class TilingApp {
     
         const tile1Transform = Transform.identity()
             .multiply(Transform.scale(25))
-            .translate(300 / 25, 200 / 25)
+            .translate(400 / 25, 300 / 25)
             .rotate(-Math.PI / 2);
     
         const t1 = tiling.addRootTile(tile1Transform, Tile.COLORS.WHITE);
