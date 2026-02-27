@@ -75,7 +75,7 @@ class InfiniteExplorer {
 
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 8;
+        const TARGET_TILES = 20;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         console.log(`✅ Final tile count: ${tiling.tiles.length}`);
@@ -125,7 +125,7 @@ class InfiniteExplorer {
                 tiling.tiles.push(neighbor);
                 this.markSharedEdges(neighbor, tiling.tiles);
                 console.log(`After placing edge ${entry.rootEdge}, root occupied edges:`, root.occupiedEdges.map(e => e.rootEdge));
-                stack.push({ edgeIdx, placedTile: neighbor, occupiedEntry });
+                stack.push({ edgeIdx, placedTile: neighbor, occupiedEntry, candidateIdx: entry.nextIdx });
                 edgeIdx++;
             } else {
                 // Backtrack
@@ -152,49 +152,68 @@ class InfiniteExplorer {
         }
     
         console.log(`Root edges filled. Tiles so far: ${tiling.tiles.length}`);
-    
-        // Now fill neighbors (up to targetCount) using the existing frontier approach
-        if (tiling.tiles.length < targetCount) {
-            const frontier = [];
-            for (let i = 1; i < tiling.tiles.length; i++) {
-                this._addToFrontier(tiling.tiles[i], tiling, frontier);
-            }
-            const neighborStack = [];
-            let iters = 0;
-            const MAX_ITERS = 500_000;
-    
-            while (tiling.tiles.length < targetCount && frontier.length > 0) {
-                if (++iters > MAX_ITERS) { console.warn('Max iters hit'); break; }
-                this._cleanFrontier(frontier);
-                if (frontier.length === 0) break;
-    
-                const entry = frontier[0];
-                let placed = null, usedCandidate = null;
-                let candidate;
-                while ((candidate = this._nextValidCandidate(entry, tiling)) !== null) {
-                    const result = this._tryPlace(entry, candidate, tiling);
-                    if (result) { placed = result; usedCandidate = candidate; break; }
+
+        const fillTile = (tile) => {
+            const isFlipped = tile.color === Tile.DARK_BLUE;
+            
+            for (let rootEdge = 0; rootEdge < 14; rootEdge++) {
+                this.markSharedEdges(tile, tiling.tiles);
+                if (tile.occupiedEdges?.some(e => e.rootEdge === rootEdge)) continue;
+                
+                const candidates = this._buildCandidates(tile, rootEdge, isFlipped);
+                let placed = false;
+                
+                for (const candidate of candidates) {
+                    const ok = this.canPlaceWithConstraints(tile, rootEdge, candidate.sourceEdgeNum, candidate.reversedSource, candidate.flippedParam);
+                    if (!ok) {
+                        console.log(`  tile ${tiling.tiles.indexOf(tile)} edge ${rootEdge} src=${candidate.sourceEdgeNum}: ❌ constraint blocked`);
+                        continue;
+                    }
+                    const result = this._tryPlace({ tile, rootEdge }, candidate, tiling);
+                    if (result) {
+                        const { neighbor, occupiedEntry } = result;
+                        if (!tile.occupiedEdges) tile.occupiedEdges = [];
+                        tile.occupiedEdges.push(occupiedEntry);
+                        neighbor.occupiedEdges = [{ rootEdge: candidate.sourceEdgeNum, sourceEdge: rootEdge, reversed: candidate.reversedSource, flipped: candidate.flippedParam }];
+                        tiling.tiles.push(neighbor);
+                        this.markSharedEdges(neighbor, tiling.tiles);
+                        console.log(`  tile ${tiling.tiles.indexOf(tile)} edge ${rootEdge}: ✅ PLACED`);
+                        placed = true;
+                        break;
+                    } else {
+                        console.log(`  tile ${tiling.tiles.indexOf(tile)} edge ${rootEdge} src=${candidate.sourceEdgeNum}: ❌ geometry failed`);
+                    }
                 }
-    
-                if (!placed) { frontier.splice(0, 1); continue; }
-    
-                const { neighbor, occupiedEntry } = placed;
-                const newIndex = tiling.tiles.length;
-                if (!entry.tile.occupiedEdges) entry.tile.occupiedEdges = [];
-                entry.tile.occupiedEdges.push(occupiedEntry);
-                neighbor.occupiedEdges = [{ rootEdge: usedCandidate.sourceEdgeNum, sourceEdge: entry.rootEdge, reversed: usedCandidate.reversedSource, flipped: usedCandidate.flippedParam }];
-                tiling.tiles.push(neighbor);
-                this.markSharedEdges(neighbor, tiling.tiles);
-                frontier.splice(0, 1);
-                this._addToFrontier(neighbor, tiling, frontier);
-                neighborStack.push({ srcEntry: entry, placedTile: neighbor, placedIndex: newIndex, occupiedEntry });
+                
+                if (!placed) {
+                    console.log(`  tile ${tiling.tiles.indexOf(tile)} edge ${rootEdge}: ⛔ NO PLACEMENT FOUND (${candidates.length} candidates tried)`);
+                }
             }
+        };
+
+        let i = 1;
+        while (i < tiling.tiles.length && tiling.tiles.length < targetCount) {
+            const tile = tiling.tiles[i];
+            const color = tile.color === Tile.DARK_BLUE ? 'DARK' : 'LIGHT';
+            console.log(`fillTile(${i}) [${color}], total tiles: ${tiling.tiles.length}`);
+            this.markSharedEdges(tile, tiling.tiles);
+            console.log(`Tile ${i} occupied edges after markSharedEdges:`, (tile.occupiedEdges || []).map(e => e.rootEdge));
+            fillTile(tile);
+            i++;
+        }
+
+        i = 1;
+        while (i < tiling.tiles.length && tiling.tiles.length < targetCount) {
+            console.log(`SECOND PASS fillTile(${i}), total: ${tiling.tiles.length}`);
+            this.markSharedEdges(tiling.tiles[i], tiling.tiles);
+            fillTile(tiling.tiles[i]);
+            i++;
         }
     }
 
     markSharedEdges(newTile, allTiles) {
         const newVerts = this.getTransformedVertices(newTile);
-        const TOL = 0.1;
+        const TOL = 1.0;
     
         for (const existingTile of allTiles) {
             if (existingTile === newTile) continue;
@@ -230,9 +249,10 @@ class InfiniteExplorer {
 
     _undo(stack, frontier, tiling) {
         const frame = stack.pop();
-        const { srcEntry, srcEntryIdx, placedTile, placedIndex, occupiedEntry } = frame;
-
-        tiling.tiles.splice(placedIndex, 1);
+        console.log(`  tile ${tiling.tiles.indexOf(tile)} BACKTRACK: undoing edge ${frame.edgeIdx}`);
+        // Reset the candidate index for the edge we're returning to
+        edgeCandidates[frame.edgeIdx].nextIdx = frame.candidateIdx; // try next candidate
+        tiling.tiles.splice(tiling.tiles.indexOf(frame.placedTile), 1);
 
         const parent = srcEntry.tile;
         if (parent.occupiedEdges) {
@@ -406,7 +426,12 @@ class InfiniteExplorer {
             if (!this.bboxesOverlap(newBBox, exBBox)) continue;
             
             const shared = this.countSharedVertices(newVerts, exVerts);
-            if (shared >= 5) return true; // too many = genuine overlap
+            
+            // Two dark tiles must never touch
+            if (newTile.color === Tile.DARK_BLUE && existingTile.color === Tile.DARK_BLUE && shared > 0) return true;
+
+            // Valid shared counts: 0, 1, 2, 4
+            if (shared === 3 || shared >= 5) return true;
             if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
         }
         return false;
