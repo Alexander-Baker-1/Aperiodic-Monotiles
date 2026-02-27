@@ -59,7 +59,7 @@ class TilingApp {
         this.canvas.height = CANVAS_HEIGHT;
     
         const dpr = window.devicePixelRatio || 1;
-        ctx.setTransform(a * dpr, d * dpr, b * dpr, e * dpr, c * dpr, f * dpr);
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         this.ctx.fillStyle = "#fff";
         this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     

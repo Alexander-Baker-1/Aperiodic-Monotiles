@@ -10,13 +10,13 @@
     <nav>
         <a href="{{ url_for('index') }}">Home</a> | 
         <a href="{{ url_for('single') }}">Single Tile</a> |
-        <a href="{{ url_for('cluster') }}">Tiling Pattern</a> |
+        <a href="{{ url_for('cluster') }}">Tiling Cluster</a> |
         <a href="{{ url_for('infinite') }}">Infinite Explorer</a> |
         <a href="{{ url_for('substitution') }}">Substitution System</a> |
         <a href="{{ url_for('chains') }}">Local Patterns</a>
     </nav>
     
-    <h1>Aperiodic Tiling Pattern</h1>
+    <h1>Aperiodic Tiling Cluster</h1>
     
     <div class="controls">
         <label for="a">a:</label>
@@ -35,7 +35,7 @@
     <div class="presets">
         <button onclick="loadPreset('chevron')">Chevron<br><small>Tile (0, 1)</small></button>
         <button onclick="loadPreset('hat')">Hat<br><small>Tile (1, √3)</small></button>
-        <button onclick="loadPreset('spectre')">Spectre<br><small>Tile (1, 1)</small></button>
+        <button onclick="loadPreset('tile11')">Tile (1, 1)<br><small>Tile (1, 1)</small></button>
         <button onclick="loadPreset('turtle')">Turtle<br><small>Tile (√3, 1)</small></button>
         <button onclick="loadPreset('comet')">Comet<br><small>Tile (1, 0)</small></button>
     </div>
