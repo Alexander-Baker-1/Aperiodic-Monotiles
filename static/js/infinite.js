@@ -75,7 +75,7 @@ class InfiniteExplorer {
 
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 6;
+        const TARGET_TILES = 7;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         console.log(`✅ Final tile count: ${tiling.tiles.length}`);
@@ -258,13 +258,17 @@ class InfiniteExplorer {
 
     _addToFrontier(tile, tiling, frontier) {
         const parentIsFlipped = (tile.color === Tile.DARK_BLUE);
+        
+        // Refresh shared edges before checking what's occupied
+        this.markSharedEdges(tile, tiling.tiles);
+        
         const occupied = tile.occupiedEdges || [];
-
+    
         for (let rootEdge = 0; rootEdge < 14; rootEdge++) {
             if (occupied.some(n => n.rootEdge === rootEdge)) continue;
-
+    
             const candidates = this._buildCandidates(tile, rootEdge, parentIsFlipped);
-
+    
             if (candidates.length > 0) {
                 frontier.push({ tile, rootEdge, candidates, nextIdx: 0 });
             }
@@ -402,12 +406,8 @@ class InfiniteExplorer {
             if (!this.bboxesOverlap(newBBox, exBBox)) continue;
             
             const shared = this.countSharedVertices(newVerts, exVerts);
-            const idx = existingTiles.indexOf(existingTile);
-            console.log(`  conflict check vs tile ${idx}: shared=${shared}, newVerts count=${newVerts.length}, exVerts count=${exVerts.length}`);
-            const sharedVerts = newVerts.filter(v1 => exVerts.some(v2 => Math.hypot(v1.x-v2.x, v1.y-v2.y) < 0.05));
-            console.log(`  shared verts:`, sharedVerts);
-            // if (shared !== 0 && shared !== 1 && shared !== 2) return true;
-            if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;   
+            if (shared > 4) return true;
+            if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
         }
         return false;
     }
