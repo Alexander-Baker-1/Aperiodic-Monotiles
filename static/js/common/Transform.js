@@ -22,31 +22,44 @@ export class Transform {
         return this.multiply(trans);
     }
 
+    /**
+     * PURPOSE: The "New Baseline". 
+     * Standard identity matrix (no mirroring here, as it's in HatGeometry).
+     */
     static identity() {
         return new Transform(1, 0, 0, 0, 1, 0);
     }
 
     /**
-     * Note: Keeping your -1 logic here so your baseline remains mirrored.
+     * PURPOSE: Standard movement.
+     * Updated to be a pure translation.
      */
     static translation(x, y) {
-        return new Transform(-1, 0, x, 0, 1, y);
+        return new Transform(1, 0, x, 0, 1, y);
     }
 
+    /**
+     * PURPOSE: Flips it back to "Normal" (Right-handed).
+     */
     static flipX() {
-        return new Transform(1, 0, 0, 0, 1, 0);
+        return new Transform(-1, 0, 0, 0, 1, 0);
     }
 
     static rotation(angle) {
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
-        return new Transform(-cos, -sin, 0, sin, cos, 0);
+        // Pure rotation math
+        return new Transform(cos, -sin, 0, sin, cos, 0);
     }
 
     static scale(s) {
-        return new Transform(-s, 0, 0, 0, s, 0);
+        // Pure scaling math
+        return new Transform(s, 0, 0, 0, s, 0);
     }
 
+    /**
+     * Combined math for stacking transforms.
+     */
     multiply(other) {
         const [a1, b1, c1, d1, e1, f1] = this.values;
         const [a2, b2, c2, d2, e2, f2] = other.values;
@@ -61,6 +74,9 @@ export class Transform {
         );
     }
 
+    /**
+     * Maps local stencil points to the mirrored screen space.
+     */
     transformPoint(point) {
         const [a, b, c, d, e, f] = this.values;
         return {
@@ -69,6 +85,9 @@ export class Transform {
         };
     }
 
+    /**
+     * Matches edges while respecting the new mirrored baseline.
+     */
     static matchEdge(p1, p2, targetP1, targetP2) {
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;

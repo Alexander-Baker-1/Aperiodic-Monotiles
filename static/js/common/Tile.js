@@ -25,14 +25,45 @@ export class Tile {
         ctx.transform(a, d, b, e, c, f);
     
         this.tracePath(ctx, curve);
-        
         ctx.fillStyle = this.color;
         ctx.fill();
-        
-        // The stroke must happen while the transform is applied
-        // so it uses the '2 / scale' width correctly.
-        ctx.stroke(); 
-        
+    
+        // Extract the actual scale from the transform matrix
+        const currentScale = Math.sqrt(a * a + d * d);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2 / currentScale;  // always ~2px on screen regardless of scale
+        ctx.stroke();
+    
+        ctx.restore();
+    }
+
+    drawLabels(ctx) {
+        ctx.save();
+        const dpr = window.devicePixelRatio || 1;
+        const fontSize = 11;
+    
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "black";
+    
+        // World-space centroid
+        const worldVerts = this.geometry.vertices.map(v => this.transform.transformPoint(v));
+        const centerX = worldVerts.reduce((sum, v) => sum + v.x, 0) / worldVerts.length;
+        const centerY = worldVerts.reduce((sum, v) => sum + v.y, 0) / worldVerts.length;
+    
+        worldVerts.forEach((v, i) => {
+            const dirX = centerX - v.x;
+            const dirY = centerY - v.y;
+            const dist = Math.sqrt(dirX * dirX + dirY * dirY);
+    
+            const fraction = 0.22;
+            const labelX = v.x + (dirX / dist) * dist * fraction;
+            const labelY = v.y + (dirY / dist) * dist * fraction;
+    
+            ctx.fillText(i, labelX, labelY);
+        });
+    
         ctx.restore();
     }
 
@@ -41,7 +72,7 @@ export class Tile {
      * to build the outline of the shape.
      */
     tracePath(ctx, curve) {
-        const moves = this.geometry.edgeMoves;
+        const moves = this.geometry.getEdgeMoves();
         ctx.beginPath();
         ctx.moveTo(0, 0); // Start at the origin of the local coordinate system
         

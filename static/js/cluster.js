@@ -1,13 +1,13 @@
-import { Matrix } from './common/Matrix.js';
 import { HatGeometry } from './common/HatGeometry.js';
 import { TilingSystem } from './common/TilingSystem.js';
 import { Tile } from './common/Tile.js';
+import { Transform } from './common/Transform.js';
 
 class TilingApp {
     static PRESETS = {
         chevron: { a: 0, b: 1, name: 'Chevron' },
         hat: { a: 1, b: Math.sqrt(3), name: 'Hat' },
-        spectre: { a: 1, b: 1, name: 'Spectre' },
+        spectre: { a: 1, b: 1, name: 'Tile (1, 1)' },
         turtle: { a: Math.sqrt(3), b: 1, name: 'Turtle' },
         comet: { a: 1, b: 0, name: 'Comet' }
     };
@@ -52,155 +52,74 @@ class TilingApp {
     }
     
     draw() {
-        var a = parseFloat(this.aSlider.value);
-        var b = parseFloat(this.bSlider.value);
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 600;
+    
+        this.canvas.width = CANVAS_WIDTH;
+        this.canvas.height = CANVAS_HEIGHT;
+    
+        const dpr = window.devicePixelRatio || 1;
+        ctx.setTransform(a * dpr, d * dpr, b * dpr, e * dpr, c * dpr, f * dpr);
+        this.ctx.fillStyle = "#fff";
+        this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+        const a = parseFloat(this.aSlider.value);
+        const b = parseFloat(this.bSlider.value);
         const curve = parseFloat(this.curveSlider.value);
-
-        if (a === 0) {
-            a = 0.001;
-        }
-        if (b === 0) {
-            b = 0.001;
-        }
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
+    
         const geometry = new HatGeometry(a, b);
         const tiling = new TilingSystem(geometry);
+    
+        const tile1Transform = Transform.identity()
+            .multiply(Transform.scale(25))
+            .translate(300 / 25, 200 / 25)
+            .rotate(-Math.PI / 2);
+    
+        const t1 = tiling.addRootTile(tile1Transform, Tile.COLORS.WHITE);
+
+        try {
+            // CORE 
+            const t2 = tiling.addAttachedTile(t1, 3, 13, { flipped: true, color: Tile.COLORS.DARK_BLUE });
+            // const t3 = tiling.addAttachedTile(t2, 12, 6, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            // const t4 = tiling.addAttachedTile(t1, 3, 7,  { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            // const t5 = tiling.addAttachedTile(t4, 9, 9,  { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            
+            // FIRST EXPANSION
+            // const t6 = tiling.addAttachedTile(t5, 13, 7, { flipped: true, color: Tile.COLORS.DARK_BLUE });
+            // const t7 = tiling.addAttachedTile(t6, 11, 5, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            // const t8 = tiling.addAttachedTile(t7, 13, 7, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            // const t9 = tiling.addAttachedTile(t8, 10, 4, { flipped: true, color: Tile.COLORS.DARK_BLUE });
+            // const t10 = tiling.addAttachedTile(t9, 10, 4, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            
+            // SECOND EXPANSION
+            // const t11 = tiling.addAttachedTile(t9, 10, 0, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            // const t12 = tiling.addAttachedTile(t11, 1, 5, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            // const t13 = tiling.addAttachedTile(t12, 7, 9, { flipped: false, color: Tile.COLORS.WHITE });
+            
+            // PERIPHERY (The "Original" Gray/White Ring)
+            // const t14 = tiling.addAttachedTile(t3, 1, 5, { flipped: false, color: Tile.COLORS.GRAY });
+            // const t15 = tiling.addAttachedTile(t14, 3, 9, { flipped: false, color: Tile.COLORS.GRAY });
+            // const t16 = tiling.addAttachedTile(t15, 9, 7, { flipped: false, color: Tile.COLORS.WHITE });
+            // const t17 = tiling.addAttachedTile(t16, 10, 2, { flipped: false, color: Tile.COLORS.WHITE });
+            
+            // const t18 = tiling.addAttachedTile(t5, 1, 1, { flipped: false, color: Tile.COLORS.GRAY });
+            // const t19 = tiling.addAttachedTile(t18, 1, 11, { flipped: false, color: Tile.COLORS.GRAY });
+            // const t20 = tiling.addAttachedTile(t19, 3, 9, { flipped: false, color: Tile.COLORS.WHITE });
+            // const t21 = tiling.addAttachedTile(t20, 2, 10, { flipped: false, color: Tile.COLORS.WHITE });
+            
+            // const t22 = tiling.addAttachedTile(t10, 1, 5, { flipped: false, color: Tile.COLORS.GRAY });
+            // const t23 = tiling.addAttachedTile(t10, 13, 9, { flipped: false, color: Tile.COLORS.GRAY });
+            // const t24 = tiling.addAttachedTile(t23, 4, 8, { flipped: false, color: Tile.COLORS.WHITE });
+            // const t25 = tiling.addAttachedTile(t24, 3, 9, { flipped: false, color: Tile.COLORS.WHITE });
         
-        // Create the initial tile
-        const rotation = Matrix.rotation(3 * Math.PI / 2);
-        const scaling = Matrix.scale(30);
-        const translation = Matrix.translation(530, 206);
-        const flip = Matrix.flipX();
-        
-        const tile1Transform = translation.multiply(rotation).multiply(scaling).multiply(flip);
-        const tile1 = tiling.addRootTile(tile1Transform, Tile.LIGHT_BLUE);
-        
-        // Add connected tiles
-        const tile2 = tiling.addTile(
-            [3, 4], tile1, [13, 14],
-            { flipped: true, color: Tile.DARK_BLUE }
-        );
-
-        const tile3 = tiling.addTile(
-            [12, 13], tile2, [6, 7],
-            { flipped: false, color: Tile.LIGHT_BLUE }
-        );
-
-        const tile4 = tiling.addTile(
-            [3, 4], tile1, [7, 6],
-            { flipped: false, color: Tile.LIGHT_BLUE }
-        );
-
-        const tile5 = tiling.addTile(
-            [9, 8], tile4, [9, 10],
-            { flipped: false, color: Tile.LIGHT_BLUE }
-        );
-
-        const tile6 = tiling.addTile(
-            [13, 14], tile5, [7, 8],
-            { flipped: true, color: Tile.DARK_BLUE }
-        );
-
-        const tile7 = tiling.addTile(
-            [11, 12], tile6, [5, 6],
-            { flipped: false, color: Tile.LIGHT_BLUE }
-        );
-
-        const tile8 = tiling.addTile(
-            [13, 12], tile7, [7, 8],
-            { flipped: false, color: Tile.LIGHT_BLUE }
-        );
-
-        const tile9 = tiling.addTile(
-            [10, 11], tile8, [4, 5],
-            { flipped: true, color: Tile.DARK_BLUE }
-        );
-
-        const tile10 = tiling.addTile(
-            [10, 11], tile9, [4, 5],
-            { flipped: false, color: Tile.LIGHT_BLUE }
-        );
-
-        const tile11 = tiling.addTile(
-            [10, 11], tile9, [14, 1],
-            { flipped: false, color: Tile.LIGHT_BLUE }
-        );
-
-        const tile12 = tiling.addTile(
-            [1, 14], tile11, [5, 6],
-            { flipped: false, color: Tile.LIGHT_BLUE }
-        );
-
-        const tile13 = tiling.addTile(
-            [7, 6], tile12, [9, 10],
-            { flipped: false, color: Tile.WHITE }
-        );
-
-        const tile14 = tiling.addTile(
-            [1, 14], tile3, [5, 6],
-            { flipped: false, color: Tile.GRAY }
-        );
-
-        const tile15 = tiling.addTile(
-            [3, 2], tile14, [9, 10],
-            { flipped: false, color: Tile.GRAY }
-        );
-
-        const tile16 = tiling.addTile(
-            [9, 8], tile15, [7, 8],
-            { flipped: false, color: Tile.WHITE }
-        );
-
-        const tile17 = tiling.addTile(
-            [10, 9], tile16, [2, 3],
-            { flipped: false, color: Tile.WHITE }
-        );
-
-        const tile18 = tiling.addTile(
-            [1, 14], tile5, [1, 2],
-            { flipped: false, color: Tile.GRAY }
-        );
-
-        const tile19 = tiling.addTile(
-            [1, 14], tile18, [11, 12],
-            { flipped: false, color: Tile.GRAY }
-        );
-
-        const tile20 = tiling.addTile(
-            [3, 4], tile19, [9, 8],
-            { flipped: false, color: Tile.WHITE }
-        );
-
-        const tile21 = tiling.addTile(
-            [2, 3], tile20, [10, 9],
-            { flipped: false, color: Tile.WHITE }
-        );
-
-        const tile22 = tiling.addTile(
-            [1, 14], tile10, [5, 6],
-            { flipped: false, color: Tile.GRAY }
-        );
-
-        const tile23 = tiling.addTile(
-            [13, 12], tile10, [9, 10],
-            { flipped: false, color: Tile.GRAY }
-        );
-
-        const tile24 = tiling.addTile(
-            [4, 3], tile23, [8, 9],
-            { flipped: false, color: Tile.WHITE }
-        );
-
-        const tile25 = tiling.addTile(
-            [3, 2], tile24, [9, 10],
-            { flipped: false, color: Tile.WHITE }
-        );
-        
-        // Draw everything
-        tiling.draw(this.ctx, curve);
-        // tiling.drawVertexLabels(this.ctx);
+        } catch (e) {
+            console.error("Connection failed at some point in the chain:", e);
+        }
+    
+        this.ctx.lineWidth = 1.5 / 25;
+        this.ctx.strokeStyle = "black";
+        tiling.render(this.ctx, curve); 
+        tiling.tiles.forEach(tile => tile.drawLabels(this.ctx));
     }
 }
 

@@ -13,10 +13,9 @@ export class TilingSystem {
     
     /**
      * Places the first tile on the canvas.
-     * Note: This will be the mirrored version because of our HatGeometry refactor.
+     * Now accepts either (x, y) coordinates OR a full Transform object.
      */
-    addRootTile(x, y, color = Tile.COLORS.DARK_BLUE) {
-        const transform = Transform.translation(x, y);
+    addRootTile(transform, color = Tile.COLORS.LIGHT_BLUE) {
         const tile = new Tile(this.geometry, transform, color);
         this.tiles.push(tile);
         return tile;

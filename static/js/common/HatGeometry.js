@@ -3,11 +3,10 @@ export class HatGeometry {
         this.a = a;
         this.b = b;
         this.vertices = this.computeVertices();
-        this.edgeMoves = this.getEdgeMoves();
     }
     
     computeVertices() {
-        const moves = this.getEdgeMoves(); // Use the getter to keep it DRY
+        const moves = this.getEdgeMoves();
         const vertices = [{x: 0, y: 0}];
         let x = 0, y = 0;
         
@@ -16,8 +15,8 @@ export class HatGeometry {
             y += dy;
             vertices.push({x, y});
         }
-        
-        return vertices;
+        vertices.pop(); // remove duplicate closing vertex
+        return vertices; // now exactly 14 vertices for 14 edges
     }
     
     getEdgeMoves() {

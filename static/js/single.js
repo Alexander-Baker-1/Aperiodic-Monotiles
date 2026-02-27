@@ -94,27 +94,27 @@ class SingleTileApp {
         // 2. Calculate scale with a "Cap"
         // This prevents the scale from becoming Infinity when a and b are 0
         const scale = this.calculateScale(a, b);
+        const geometry = new HatGeometry(a, b);
     
         // 3. Setup the pose
+        const verts = geometry.vertices;
+        const cx = verts.reduce((sum, v) => sum + v.x, 0) / verts.length;
+        const cy = verts.reduce((sum, v) => sum + v.y, 0) / verts.length;
+
         const centerX = this.displayWidth / 2;
         const centerY = this.displayHeight / 2;
-        const verticalVisualOffset = (scale * (a + b)) / 2; 
         
         const pose = Transform.identity()
-            .translate(centerX, centerY - verticalVisualOffset)
-            .rotate(Math.PI / 2) 
-            .multiply(Transform.scale(scale));
+            .translate(centerX, centerY)
+            .rotate(-Math.PI / 2)
+            .multiply(Transform.scale(scale))
+            .translate(-cx, -cy);
         
-        const geometry = new HatGeometry(a, b);
         const tile = new Tile(geometry, pose, Tile.COLORS.LIGHT_BLUE);
         
         // 4. THE FIX: Set the line width relative to the scale
         // We want it to be ~2 pixels on the screen. 
         // So we divide 2 by the current zoom level (scale).
-        this.ctx.lineWidth = 2 / scale; 
-        
-        // Ensure we don't divide by zero if scale is somehow 0
-        if (!isFinite(this.ctx.lineWidth)) this.ctx.lineWidth = 1;
     
         this.ctx.lineJoin = 'round';
         this.ctx.lineCap = 'round';
