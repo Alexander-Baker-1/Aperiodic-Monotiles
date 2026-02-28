@@ -21,8 +21,7 @@ class TilingApp {
         this.curveSlider = curveSlider;
         
         this.setupEventListeners();
-        this.updateValues();
-        this.draw();
+        this.loadPreset('hat');
     }
     
     setupEventListeners() {
@@ -72,45 +71,45 @@ class TilingApp {
     
         const tile1Transform = Transform.identity()
             .multiply(Transform.scale(25))
-            .translate(400 / 25, 300 / 25)
-            .rotate(-Math.PI / 2);
+            .translate(500 / 25, 450 / 25)
+            .rotate(Math.PI / 2 - 0.2);
     
         const t1 = tiling.addRootTile(tile1Transform, Tile.COLORS.WHITE);
 
         try {
             // CORE 
-            const t2 = tiling.addAttachedTile(t1, 3, 13, { flipped: true, color: Tile.COLORS.DARK_BLUE });
-            // const t3 = tiling.addAttachedTile(t2, 12, 6, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
-            // const t4 = tiling.addAttachedTile(t1, 3, 7,  { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
-            // const t5 = tiling.addAttachedTile(t4, 9, 9,  { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            const t2 = tiling.addAttachedTile(t1, 0, 11, { color: Tile.COLORS.LIGHT_BLUE });
+            const t3 = tiling.addAttachedTile(t1, 3, 8, { color: Tile.COLORS.LIGHT_BLUE });
+            const t4 = tiling.addAttachedTile(t1, 4, 11, { color: Tile.COLORS.LIGHT_BLUE });
+            const t5 = tiling.addAttachedTile(t1, 8, 7, { color: Tile.COLORS.LIGHT_BLUE });
+            const t6 = tiling.addAttachedTile(t1, 9, 2, { color: Tile.COLORS.LIGHT_BLUE });
+            const t7 = tiling.addAttachedTile(t1, 12, 9, { color: Tile.COLORS.LIGHT_BLUE });
+
+            // FIRST RING
+            const t8 = tiling.addAttachedTile(t2, 1, 0, { color: Tile.COLORS.WHITE });
+            const t9 = tiling.addAttachedTile(t2, 4, 10, { color: Tile.COLORS.DARK_BLUE });
+            const t10 = tiling.addAttachedTile(t3, 0, 11, { color: Tile.COLORS.GRAY });
+            const t11 = tiling.addAttachedTile(t3, 3, 2, { color: Tile.COLORS.WHITE });
+            const t12 = tiling.addAttachedTile(t4, 4, 10, { color: Tile.COLORS.DARK_BLUE });
+            const t13 = tiling.addAttachedTile(t5, 0, 11, { color: Tile.COLORS.GRAY });
+            const t14 = tiling.addAttachedTile(t5, 3, 6, { color: Tile.COLORS.WHITE });
+            const t15 = tiling.addAttachedTile(t6, 7, 8, { color: Tile.COLORS.WHITE });
+            const t16 = tiling.addAttachedTile(t6, 9, 8, { color: Tile.COLORS.LIGHT_BLUE });
+            const t17 = tiling.addAttachedTile(t6, 10, 0, { color: Tile.COLORS.DARK_BLUE });
+            const t18 = tiling.addAttachedTile(t7, 0, 11, { color: Tile.COLORS.GRAY });
             
-            // FIRST EXPANSION
-            // const t6 = tiling.addAttachedTile(t5, 13, 7, { flipped: true, color: Tile.COLORS.DARK_BLUE });
-            // const t7 = tiling.addAttachedTile(t6, 11, 5, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
-            // const t8 = tiling.addAttachedTile(t7, 13, 7, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
-            // const t9 = tiling.addAttachedTile(t8, 10, 4, { flipped: true, color: Tile.COLORS.DARK_BLUE });
-            // const t10 = tiling.addAttachedTile(t9, 10, 4, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
+            // SECOND RING
             
-            // SECOND EXPANSION
-            // const t11 = tiling.addAttachedTile(t9, 10, 0, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
-            // const t12 = tiling.addAttachedTile(t11, 1, 5, { flipped: false, color: Tile.COLORS.LIGHT_BLUE });
-            // const t13 = tiling.addAttachedTile(t12, 7, 9, { flipped: false, color: Tile.COLORS.WHITE });
+            const t19 = tiling.addAttachedTile(t8, 11, 0, { color: Tile.COLORS.WHITE });
+            const t20 = tiling.addAttachedTile(t9, 4, 10, { color: Tile.COLORS.LIGHT_BLUE });
             
-            // PERIPHERY (The "Original" Gray/White Ring)
-            // const t14 = tiling.addAttachedTile(t3, 1, 5, { flipped: false, color: Tile.COLORS.GRAY });
-            // const t15 = tiling.addAttachedTile(t14, 3, 9, { flipped: false, color: Tile.COLORS.GRAY });
-            // const t16 = tiling.addAttachedTile(t15, 9, 7, { flipped: false, color: Tile.COLORS.WHITE });
-            // const t17 = tiling.addAttachedTile(t16, 10, 2, { flipped: false, color: Tile.COLORS.WHITE });
-            
-            // const t18 = tiling.addAttachedTile(t5, 1, 1, { flipped: false, color: Tile.COLORS.GRAY });
-            // const t19 = tiling.addAttachedTile(t18, 1, 11, { flipped: false, color: Tile.COLORS.GRAY });
-            // const t20 = tiling.addAttachedTile(t19, 3, 9, { flipped: false, color: Tile.COLORS.WHITE });
-            // const t21 = tiling.addAttachedTile(t20, 2, 10, { flipped: false, color: Tile.COLORS.WHITE });
-            
-            // const t22 = tiling.addAttachedTile(t10, 1, 5, { flipped: false, color: Tile.COLORS.GRAY });
-            // const t23 = tiling.addAttachedTile(t10, 13, 9, { flipped: false, color: Tile.COLORS.GRAY });
-            // const t24 = tiling.addAttachedTile(t23, 4, 8, { flipped: false, color: Tile.COLORS.WHITE });
-            // const t25 = tiling.addAttachedTile(t24, 3, 9, { flipped: false, color: Tile.COLORS.WHITE });
+            // THIRD RING
+
+            const t21 = tiling.addAttachedTile(t10, 0, 11, { color: Tile.COLORS.GRAY });
+            const t22 = tiling.addAttachedTile(t11, 11, 0, { color: Tile.COLORS.WHITE });
+            const t23 = tiling.addAttachedTile(t12, 4, 10, { color: Tile.COLORS.LIGHT_BLUE });
+            const t24 = tiling.addAttachedTile(t13, 0, 11, { color: Tile.COLORS.GRAY });
+            const t25 = tiling.addAttachedTile(t16, 1, 0, { color: Tile.COLORS.GRAY });
         
         } catch (e) {
             console.error("Connection failed at some point in the chain:", e);
@@ -119,7 +118,10 @@ class TilingApp {
         this.ctx.lineWidth = 1.5 / 25;
         this.ctx.strokeStyle = "black";
         tiling.render(this.ctx, curve); 
-        tiling.tiles.forEach(tile => tile.drawLabels(this.ctx));
+        tiling.tiles.forEach((tile, i) => {
+            tile.drawLabels(this.ctx);
+            tile.drawTileLabel(this.ctx, `${i + 1}`);
+        });
     }
 }
 

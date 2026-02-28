@@ -9,10 +9,11 @@ export class Tile {
         GRAY: 'rgba(191, 191, 191, 1)'
     };
 
-    constructor(geometry, transform, color = Tile.COLORS.LIGHT_BLUE) {
-        this.geometry = geometry;   // The Stencil (Math)
-        this.transform = transform; // The Hand (Position/Pose)
-        this.color = color;         // The Paint
+    constructor(geometry, transform, color, flipped = false) {
+        this.geometry = geometry;
+        this.transform = transform;
+        this.color = color;
+        this.flipped = flipped;
     }
 
     /**
@@ -64,6 +65,20 @@ export class Tile {
             ctx.fillText(i, labelX, labelY);
         });
     
+        ctx.restore();
+    }
+
+    drawTileLabel(ctx, label) {
+        const worldVerts = this.geometry.vertices.map(v => this.transform.transformPoint(v));
+        const centerX = worldVerts.reduce((sum, v) => sum + v.x, 0) / worldVerts.length;
+        const centerY = worldVerts.reduce((sum, v) => sum + v.y, 0) / worldVerts.length;
+    
+        ctx.save();
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'black';
+        ctx.fillText(label, centerX, centerY);
         ctx.restore();
     }
 
