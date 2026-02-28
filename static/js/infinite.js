@@ -152,8 +152,42 @@ class InfiniteExplorer {
     
         console.log(`Done. Placed ${tiling.tiles.length} tiles in ${safety} iterations.`);
     }
+
+    _fillDarkBlueTile(tile, tiling) {
+        const pattern = [
+            { parentEdge: 0,  sourceEdge: 10, color: Tile.COLORS.LIGHT_BLUE },
+            { parentEdge: 4,  sourceEdge: 10, color: Tile.COLORS.LIGHT_BLUE },
+            { parentEdge: 8,  sourceEdge: 12, color: Tile.COLORS.LIGHT_BLUE },
+            { parentEdge: 10, sourceEdge: 4,  color: Tile.COLORS.LIGHT_BLUE },
+        ];
+    
+        const placed = [];
+        for (const { parentEdge, sourceEdge, color } of pattern) {
+            if (tile.occupiedEdges.has(parentEdge)) continue;
+    
+            const transform = tiling.computeAttachedTransform(tile, parentEdge, sourceEdge, color);
+            const neighbor = new Tile(tiling.geometry, transform, color, false);
+    
+            const conflict = this.hasGeometricConflict(neighbor, tiling.tiles, tile);
+            if (conflict === 'duplicate') {
+                tile.occupiedEdges.set(parentEdge, null);
+                continue;
+            }
+            if (conflict) continue;
+    
+            tiling.commitTile(tile, parentEdge, neighbor, sourceEdge);
+            this.markSharedEdges(neighbor, tiling.tiles);
+            placed.push({ neighbor, parentEdge, neighborEdge: sourceEdge });
+        }
+    
+        return placed;
+    }
     
     _fillOneTile(tile, tiling, targetCount) {
+        if (tile.flipped) {
+            const placed = this._fillDarkBlueTile(tile, tiling);
+            return { success: true, placed };
+        }
         const isFlipped = tile.flipped;
         this.markSharedEdges(tile, tiling.tiles);
         const placed = [];
@@ -272,27 +306,42 @@ class InfiniteExplorer {
     }
 
     _buildCandidates(tile, rootEdge, parentIsFlipped) {
-        const candidates = [];
-        const colorOptions = parentIsFlipped ? [false] : [true, false];
-
-        for (const tryDarkBlue of colorOptions) {
-            const desiredColor = tryDarkBlue ? Tile.COLORS.DARK_BLUE : Tile.COLORS.LIGHT_BLUE;
-            const desiredFlipped = tryDarkBlue;
-
-            const validSources = this.neighborEdges[parentIsFlipped][desiredFlipped][rootEdge];
-            if (!validSources?.length) continue;
-
-            for (const sourceEdgeNum of validSources) {
-                candidates.push({ rootEdge, sourceEdgeNum, desiredColor, desiredFlipped });
+        const lightBlue = [];
+        const darkBlue = [];
+    
+        if (!parentIsFlipped) {
+            // Light blue candidates
+            const lightSources = this.neighborEdges[parentIsFlipped][false][rootEdge];
+            if (lightSources?.length) {
+                for (const sourceEdgeNum of lightSources) {
+                    lightBlue.push({ rootEdge, sourceEdgeNum, desiredColor: Tile.COLORS.LIGHT_BLUE, desiredFlipped: false });
+                }
+            }
+            // Dark blue candidates
+            const darkSources = this.neighborEdges[parentIsFlipped][true][rootEdge];
+            if (darkSources?.length) {
+                for (const sourceEdgeNum of darkSources) {
+                    darkBlue.push({ rootEdge, sourceEdgeNum, desiredColor: Tile.COLORS.DARK_BLUE, desiredFlipped: true });
+                }
+            }
+        } else {
+            // Parent is dark blue — only light blue allowed
+            const lightSources = this.neighborEdges[parentIsFlipped][false][rootEdge];
+            if (lightSources?.length) {
+                for (const sourceEdgeNum of lightSources) {
+                    lightBlue.push({ rootEdge, sourceEdgeNum, desiredColor: Tile.COLORS.LIGHT_BLUE, desiredFlipped: false });
+                }
             }
         }
-
-        for (let i = candidates.length - 1; i > 0; i--) {
+    
+        // Shuffle light blue only
+        for (let i = lightBlue.length - 1; i > 0; i--) {
             const j = Math.floor(this.seededRandom() * (i + 1));
-            [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+            [lightBlue[i], lightBlue[j]] = [lightBlue[j], lightBlue[i]];
         }
-
-        return candidates;
+    
+        // Dark blue always comes last
+        return [...lightBlue, ...darkBlue];
     }
 
     _tryPlace(entry, candidate, tiling) {
@@ -315,6 +364,13 @@ class InfiniteExplorer {
         if (dist < 1.0) return null;
     
         const conflict = this.hasGeometricConflict(neighbor, tiling.tiles, entry.tile);
+        console.log(`    conflict check: ${conflict}, shared verts with each tile:`);
+        for (const t of tiling.tiles) {
+            if (t === entry.tile) continue;
+            const exVerts = this.getTransformedVertices(t);
+            const shared = this.countSharedVertices(this.getTransformedVertices(neighbor), exVerts);
+            if (shared > 0) console.log(`      vs tile ${tiling.tiles.indexOf(t)}: shared=${shared}`);
+        }
         if (conflict === 'duplicate') return 'duplicate';
         if (conflict) return null;
     
@@ -337,7 +393,7 @@ class InfiniteExplorer {
             const shared = this.countSharedVertices(newVerts, exVerts);
             if (shared >= 9) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
-            if (shared === 3 || shared >= 5) return true;
+            if (shared >= 5) return true;  // removed shared === 3
             if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
         }
         return false;
