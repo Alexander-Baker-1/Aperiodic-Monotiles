@@ -78,7 +78,7 @@ class InfiniteExplorer {
         tiling.addRootTile(rootTransform, rootColor);
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 12;
+        const TARGET_TILES = 15;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         tiling.render(this.ctx, 0);
@@ -93,7 +93,7 @@ class InfiniteExplorer {
         const retryCount = new Map(); // track retries per tile
     
         let safety = 0;
-        while (tiling.tiles.length < targetCount && safety < 10000) {
+        while (tiling.tiles.length < targetCount && safety < 100) {
             safety++;
     
             if (frontier.length === 0) break;
@@ -241,15 +241,15 @@ class InfiniteExplorer {
                 console.log(`    result: ${result === 'duplicate' ? 'duplicate' : result ? 'placed' : 'rejected'}`);
     
                 if (result === 'duplicate') {
-                    // Verify the edge is actually shared with an existing tile
                     this.markSharedEdges(tile, tiling.tiles);
-                    if (!tile.occupiedEdges.has(edgeIdx)) {
-                        // False duplicate — the edge isn't actually filled, treat as rejection
-                        console.warn(`    false duplicate on edge ${edgeIdx} — treating as rejection`);
-                        continue;
+                    if (tile.occupiedEdges.has(edgeIdx)) {
+                        // Confirmed — edge is genuinely occupied
+                        filled = true;
+                        break;
                     }
-                    filled = true;
-                    break;
+                    // Not confirmed by markSharedEdges — true false duplicate, skip
+                    console.warn(`    false duplicate on edge ${edgeIdx} — treating as rejection`);
+                    continue;
                 } else if (result) {
                     const { neighbor } = result;
                     this.markSharedEdges(neighbor, tiling.tiles);
@@ -272,6 +272,24 @@ class InfiniteExplorer {
             }
         }
     
+        // After the loop, verify all edges are truly occupied
+        this.markSharedEdges(tile, tiling.tiles);
+        const unoccupied = [];
+        for (let e = 0; e < 14; e++) {
+            if (!tile.occupiedEdges.has(e)) unoccupied.push(e);
+        }
+        if (unoccupied.length > 0) {
+            console.warn(`  tile still has unoccupied edges after fill: ${unoccupied} — FAILING`);
+            for (const { neighbor, parentEdge, neighborEdge } of placed) {
+                const idx = tiling.tiles.indexOf(neighbor);
+                if (idx >= 0) tiling.tiles.splice(idx, 1);
+                tile.occupiedEdges.delete(parentEdge);
+                neighbor.occupiedEdges.delete(neighborEdge);
+            }
+            console.groupEnd();
+            return { success: false, placed: [] };
+        }
+
         console.log(`  done. placed ${placed.length} new tiles`);
         console.groupEnd();
         return { success: true, placed };
