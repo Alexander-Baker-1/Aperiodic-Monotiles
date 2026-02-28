@@ -188,6 +188,7 @@ class InfiniteExplorer {
             const placed = this._fillDarkBlueTile(tile, tiling);
             return { success: true, placed };
         }
+    
         const isFlipped = tile.flipped;
         this.markSharedEdges(tile, tiling.tiles);
         const placed = [];
@@ -195,6 +196,9 @@ class InfiniteExplorer {
     
         console.group(`fillOneTile: tile ${tileIdx} (flipped=${isFlipped})`);
         console.log(`occupied edges at start:`, [...tile.occupiedEdges.keys()]);
+    
+        // Snapshot which edges were occupied BEFORE we start placing
+        const initiallyOccupied = new Set(tile.occupiedEdges.keys());
     
         const edgeCandidates = [];
         for (let e = 0; e < 14; e++) {
@@ -206,13 +210,27 @@ class InfiniteExplorer {
     
         for (let edgeIdx = 0; edgeIdx < 14; edgeIdx++) {
             if (tiling.tiles.length >= targetCount) break;
-            this.markSharedEdges(tile, tiling.tiles);
-            if (tile.occupiedEdges.has(edgeIdx)) {
+    
+            // Skip if occupied before we started
+            if (initiallyOccupied.has(edgeIdx)) {
                 console.log(`  edge ${edgeIdx}: already occupied`);
                 continue;
             }
     
+            // Re-check live state — a neighbor we just placed may have filled this edge
+            this.markSharedEdges(tile, tiling.tiles);
+            if (tile.occupiedEdges.has(edgeIdx)) {
+                console.log(`  edge ${edgeIdx}: filled by neighbor`);
+                continue;
+            }
+    
             const entry = edgeCandidates[edgeIdx];
+    
+            if (entry.candidates.length === 0) {
+                console.log(`  edge ${edgeIdx}: no candidates, skipping`);
+                continue;
+            }
+    
             console.log(`  edge ${edgeIdx}: trying ${entry.candidates.length} candidates`);
             let filled = false;
     
@@ -223,7 +241,13 @@ class InfiniteExplorer {
                 console.log(`    result: ${result === 'duplicate' ? 'duplicate' : result ? 'placed' : 'rejected'}`);
     
                 if (result === 'duplicate') {
-                    tile.occupiedEdges.set(edgeIdx, null);
+                    // Verify the edge is actually shared with an existing tile
+                    this.markSharedEdges(tile, tiling.tiles);
+                    if (!tile.occupiedEdges.has(edgeIdx)) {
+                        // False duplicate — the edge isn't actually filled, treat as rejection
+                        console.warn(`    false duplicate on edge ${edgeIdx} — treating as rejection`);
+                        continue;
+                    }
                     filled = true;
                     break;
                 } else if (result) {
