@@ -1,7 +1,4 @@
-import { Transform } from './Transform.js';
-
 export class Tile {
-    // 1. COLOR "ENUMS" (Static constants shared by all Tiles)
     static COLORS = {
         DARK_BLUE: 'rgba(0, 137, 212, 1)',
         LIGHT_BLUE: 'rgba(148, 205, 235, 1)',
@@ -9,62 +6,49 @@ export class Tile {
         GRAY: 'rgba(191, 191, 191, 1)'
     };
 
-    constructor(geometry, transform, color, flipped = false) {
+    constructor(geometry, transform, color = Tile.COLORS.LIGHT_BLUE, flipped = false) {
         this.geometry = geometry;
         this.transform = transform;
         this.color = color;
         this.flipped = flipped;
+        this.occupiedEdges = new Map();
     }
 
-    /**
-     * PURPOSE: The "Main Engine". It prepares the canvas, coordinates 
-     * the drawing, and cleans up afterward.
-     */
     render(ctx, curve) {
         ctx.save();
         const [a, b, c, d, e, f] = this.transform.values;
         ctx.transform(a, d, b, e, c, f);
-    
         this.tracePath(ctx, curve);
         ctx.fillStyle = this.color;
         ctx.fill();
-    
-        // Extract the actual scale from the transform matrix
         const currentScale = Math.sqrt(a * a + d * d);
         ctx.strokeStyle = 'black';
-        ctx.lineWidth = 2 / currentScale;  // always ~2px on screen regardless of scale
+        ctx.lineWidth = 2 / currentScale;
         ctx.stroke();
-    
         ctx.restore();
     }
 
     drawLabels(ctx) {
         ctx.save();
-        const dpr = window.devicePixelRatio || 1;
-        const fontSize = 11;
-    
-        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.font = `bold 11px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillStyle = "black";
-    
-        // World-space centroid
+
         const worldVerts = this.geometry.vertices.map(v => this.transform.transformPoint(v));
         const centerX = worldVerts.reduce((sum, v) => sum + v.x, 0) / worldVerts.length;
         const centerY = worldVerts.reduce((sum, v) => sum + v.y, 0) / worldVerts.length;
-    
+
         worldVerts.forEach((v, i) => {
             const dirX = centerX - v.x;
             const dirY = centerY - v.y;
             const dist = Math.sqrt(dirX * dirX + dirY * dirY);
-    
             const fraction = 0.22;
             const labelX = v.x + (dirX / dist) * dist * fraction;
             const labelY = v.y + (dirY / dist) * dist * fraction;
-    
             ctx.fillText(i, labelX, labelY);
         });
-    
+
         ctx.restore();
     }
 
@@ -72,7 +56,7 @@ export class Tile {
         const worldVerts = this.geometry.vertices.map(v => this.transform.transformPoint(v));
         const centerX = worldVerts.reduce((sum, v) => sum + v.x, 0) / worldVerts.length;
         const centerY = worldVerts.reduce((sum, v) => sum + v.y, 0) / worldVerts.length;
-    
+
         ctx.save();
         ctx.font = 'bold 24px sans-serif';
         ctx.textAlign = 'center';
@@ -82,47 +66,29 @@ export class Tile {
         ctx.restore();
     }
 
-    /**
-     * PURPOSE: The "Pathfinder". It iterates through the geometry's instructions 
-     * to build the outline of the shape.
-     */
     tracePath(ctx, curve) {
         const moves = this.geometry.getEdgeMoves();
         ctx.beginPath();
-        ctx.moveTo(0, 0); // Start at the origin of the local coordinate system
-        
+        ctx.moveTo(0, 0);
         let px = 0, py = 0;
         for (let [dx, dy] of moves) {
             this.drawEdge(ctx, px, py, dx, dy, curve);
-            px += dx; // Update current position relative to the previous move
+            px += dx;
             py += dy;
         }
         ctx.closePath();
     }
 
-    /**
-     * PURPOSE: The "Artist". It calculates how to turn a straight line 
-     * into a smooth Bezier curve based on a "twiddle" factor.
-     */
     drawEdge(ctx, x, y, dx, dy, curve) {
-        // Calculate the "Normal" (a vector sticking out sideways from the edge)
-        const nx = dy; 
+        const nx = dy;
         const ny = -dx;
-        
-        // Control Points: These "pull" the line outward to create the curve
         const cp1x = x - curve * nx + dx / 2;
         const cp1y = y - curve * ny + dy / 2;
         const cp2x = x + curve * nx + dx / 2;
         const cp2y = y + curve * ny + dy / 2;
-        
-        // Draw the cubic bezier from current (x,y) to the destination (x+dx, y+dy)
         ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x + dx, y + dy);
     }
 
-    /**
-     * PURPOSE: The "GPS". Translates a local point on the stencil 
-     * into an actual pixel coordinate on the screen.
-     */
     getVertexWorldPos(index) {
         return this.transform.transformPoint(this.geometry.vertices[index]);
     }

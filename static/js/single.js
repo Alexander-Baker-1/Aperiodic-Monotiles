@@ -6,9 +6,11 @@ class SingleTileApp {
     // Presets for the different aperiodic variations
     static PRESETS = {
         chevron: { a: 0, b: 1, name: 'Chevron' },
+        tile14: { a: 1, b: 4, name: 'Tile (1, 4)' },
         hat: { a: 1, b: Math.sqrt(3), name: 'Hat' },
-        spectre: { a: 1, b: 1, name: 'Spectre' },
+        tile11: { a: 1, b: 1, name: 'Tile (1, 1)' },
         turtle: { a: Math.sqrt(3), b: 1, name: 'Turtle' },
+        tile41: { a: 4, b: 1, name: 'Tile (4, 1)' },
         comet: { a: 1, b: 0, name: 'Comet' }
     };
 
@@ -25,6 +27,7 @@ class SingleTileApp {
         
         this.setupCanvas();
         this.setupEventListeners();
+        this.loadPreset('hat');
         this.updateValues();
         this.draw();
     }

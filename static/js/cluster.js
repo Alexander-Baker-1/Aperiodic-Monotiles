@@ -6,9 +6,11 @@ import { Transform } from './common/Transform.js';
 class TilingApp {
     static PRESETS = {
         chevron: { a: 0, b: 1, name: 'Chevron' },
+        tile14: { a: 1, b: 4, name: 'Tile (1, 4)' },
         hat: { a: 1, b: Math.sqrt(3), name: 'Hat' },
-        spectre: { a: 1, b: 1, name: 'Tile (1, 1)' },
+        tile11: { a: 1, b: 1, name: 'Tile (1, 1)' },
         turtle: { a: Math.sqrt(3), b: 1, name: 'Turtle' },
+        tile41: { a: 4, b: 1, name: 'Tile (4, 1)' },
         comet: { a: 1, b: 0, name: 'Comet' }
     };
 
@@ -62,8 +64,8 @@ class TilingApp {
         this.ctx.fillStyle = "#fff";
         this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
-        const a = parseFloat(this.aSlider.value);
-        const b = parseFloat(this.bSlider.value);
+        const a = Math.max(parseFloat(this.aSlider.value), 0.001);
+        const b = Math.max(parseFloat(this.bSlider.value), 0.001);
         const curve = parseFloat(this.curveSlider.value);
     
         const geometry = new HatGeometry(a, b);
@@ -118,10 +120,10 @@ class TilingApp {
         this.ctx.lineWidth = 1.5 / 25;
         this.ctx.strokeStyle = "black";
         tiling.render(this.ctx, curve); 
-        tiling.tiles.forEach((tile, i) => {
-            tile.drawLabels(this.ctx);
-            tile.drawTileLabel(this.ctx, `${i + 1}`);
-        });
+        // tiling.tiles.forEach((tile, i) => {
+        //     tile.drawLabels(this.ctx);
+        //     tile.drawTileLabel(this.ctx, `${i + 1}`);
+        // });
     }
 }
 
