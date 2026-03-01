@@ -78,7 +78,7 @@ class InfiniteExplorer {
         tiling.addRootTile(rootTransform, rootColor);
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 19;
+        const TARGET_TILES = 12;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         tiling.render(this.ctx, 0);
@@ -86,6 +86,18 @@ class InfiniteExplorer {
         for (const tile of tiling.tiles) {
             tile.drawLabels(this.ctx);
         }        
+    }
+
+    _pointInPolygon(point, polygon) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[j].x, yj = polygon[j].y;
+            const intersect = ((yi > point.y) !== (yj > point.y))
+                && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
     }
 
     backtrackingFill(tiling, targetCount) {
@@ -202,13 +214,20 @@ class InfiniteExplorer {
         }
     
         const isFlipped = tile.flipped;
-        this.markSharedEdges(tile, tiling.tiles);
+        // this.markSharedEdges(tile, tiling.tiles);
         const placed = [];
         const tileIdx = tiling.tiles.indexOf(tile);
     
         console.group(`fillOneTile: tile ${tileIdx} (flipped=${isFlipped})`);
         console.log(`occupied edges at start:`, [...tile.occupiedEdges.keys()]);
     
+        // Clean stale occupiedEdges before snapshotting
+        for (const [e, occupier] of [...tile.occupiedEdges]) {
+            if (occupier && !tiling.tiles.includes(occupier)) {
+                tile.occupiedEdges.delete(e);
+            }
+        }
+
         // Snapshot which edges were occupied BEFORE we start placing
         const initiallyOccupied = new Set(tile.occupiedEdges.keys());
     
@@ -256,7 +275,7 @@ class InfiniteExplorer {
                 console.log(`    result: ${result === 'duplicate' ? 'duplicate' : result ? 'placed' : 'rejected'}`);
     
                 if (result === 'duplicate') {
-                    this.markSharedEdges(tile, tiling.tiles);
+                    // this.markSharedEdges(tile, tiling.tiles);
                     if (tile.occupiedEdges.has(edgeIdx)) {
                         filled = true;
                         break;
@@ -305,7 +324,7 @@ class InfiniteExplorer {
         }
     
         // After the loop, verify all edges are truly occupied
-        this.markSharedEdges(tile, tiling.tiles);
+        // this.markSharedEdges(tile, tiling.tiles);
         const unoccupied = [];
         for (let e = 0; e < 14; e++) {
             if (!tile.occupiedEdges.has(e)) unoccupied.push(e);
@@ -390,8 +409,8 @@ class InfiniteExplorer {
     }
 
     _buildCandidates(tile, rootEdge, parentIsFlipped) {
-        const lightBlue = [];
-        const darkBlue = [];
+        let lightBlue = [];
+        let darkBlue = [];
     
         if (!parentIsFlipped) {
             // Light blue candidates
@@ -418,6 +437,9 @@ class InfiniteExplorer {
             }
         }
     
+        lightBlue = lightBlue.filter(c => !this._isBlocked(tile, c.rootEdge, c.sourceEdgeNum));
+        darkBlue = darkBlue.filter(c => !this._isBlocked(tile, c.rootEdge, c.sourceEdgeNum));
+
         // Shuffle light blue only
         for (let i = lightBlue.length - 1; i > 0; i--) {
             const j = Math.floor(this.seededRandom() * (i + 1));
@@ -497,11 +519,13 @@ class InfiniteExplorer {
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
             if (shared >= 5) return true;
             if (shared === 3) {
-                const newCentroid = this._centroid(newVerts);
-                const exCentroid = this._centroid(exVerts);
-                const dist = Math.hypot(newCentroid.x - exCentroid.x, newCentroid.y - exCentroid.y);
-                console.log(`  shared=3 centroid dist: ${dist.toFixed(2)}`);
-                if (dist < 60) return true; // tweak threshold
+                const hasInterior = newVerts.some(v => {
+                    const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 0.05);
+                    const inside = !isShared && this._pointInPolygon(v, exVerts);
+                    if (inside) console.log(`  point inside polygon detected`);
+                    return inside;
+                });
+                if (hasInterior) return true;
             }
             if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
         }
@@ -629,6 +653,26 @@ class InfiniteExplorer {
         const signA = Math.sign(dx * (pointA.y - edgeP1.y) - dy * (pointA.x - edgeP1.x));
         const signB = Math.sign(dx * (pointB.y - edgeP1.y) - dy * (pointB.x - edgeP1.x));
         return signA !== 0 && signB !== 0 && signA !== signB;
+    }
+
+    _isBlocked(tile, rootEdge, sourceEdgeNum) {
+        // Check all already-placed neighbors on this tile
+        for (const [placedEdge, neighbor] of tile.occupiedEdges) {
+            if (!neighbor || typeof neighbor !== 'object') continue;
+            // Find what sourceEdge was used for this placed neighbor
+            const placedSourceEdge = neighbor.occupiedEdges ? 
+                [...neighbor.occupiedEdges.entries()].find(([e, t]) => t === tile)?.[0] : null;
+            if (placedSourceEdge === null || placedSourceEdge === undefined) continue;
+            
+            // Look up constraints for this placed connection
+            const constraints = this.edgeConstraints[placedEdge]?.[placedSourceEdge];
+            if (!constraints) continue;
+            
+            // Check if [rootEdge, sourceEdgeNum] is in the blocked list
+            const blocked = constraints.blocks.some(([be, bs]) => be === rootEdge && bs === sourceEdgeNum);
+            if (blocked) return true;
+        }
+        return false;
     }
 
     buildEdgeConstraints() {
