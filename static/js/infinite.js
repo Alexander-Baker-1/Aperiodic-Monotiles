@@ -79,7 +79,7 @@ class InfiniteExplorer {
         tiling.addRootTile(rootTransform, rootColor);
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 22;
+        const TARGET_TILES = 25;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         tiling.render(this.ctx, 0);
@@ -517,18 +517,13 @@ class InfiniteExplorer {
             if (existingTile === parentTile) continue;
             const exVerts = this.getTransformedVertices(existingTile);
             const exBBox = this.getBoundingBox(exVerts);
-            if (!this.bboxesOverlap(newBBox, exBBox)) continue;
-    
+            if (!this.bboxesOverlap(newBBox, exBBox)) {
+                console.log(`    skipping tile due to bbox`);
+                continue;
+            }
+
             const shared = this.countSharedVertices(newVerts, exVerts);
             console.log(`    shared=${shared}`);
-            if (shared === 3 || shared === 4) {
-                console.log(`    shared=${shared} — entering pip block`);
-                for (const v of newVerts) {
-                    const inside = this._pointInPolygon(v, exVerts);
-                    const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 1.0);
-                    if (inside) console.log(`    vertex (${v.x.toFixed(1)}, ${v.y.toFixed(1)}) inside=${inside} isShared=${isShared}`);
-                }
-            }
             if (shared >= 9) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
             if (newTile.color === Tile.COLORS.DARK_BLUE || existingTile.color === Tile.COLORS.DARK_BLUE) {
@@ -536,20 +531,35 @@ class InfiniteExplorer {
             } else {
                 if (shared >= 5) return true;
             }
-            if (shared === 3 || shared === 4) {
-                const newInsideEx = newVerts.some(v => {
-                    const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 1.0);
-                    const inside = !isShared && this._pointInPolygon(v, exVerts);
-                    if (inside) console.log(`    new vertex inside existing`);
-                    return inside;
-                });
-                const exInsideNew = exVerts.some(v => {
-                    const isShared = newVerts.some(nv => Math.hypot(v.x - nv.x, v.y - nv.y) < 1.0);
-                    const inside = !isShared && this._pointInPolygon(v, newVerts);
-                    if (inside) console.log(`    existing vertex inside new`);
-                    return inside;
-                });
-                if (newInsideEx || exInsideNew) return true;
+            // if (shared === 3 || shared === 4) {
+            //     const newInsideEx = newVerts.some(v => {
+            //         const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 1.0);
+            //         const inside = !isShared && this._pointInPolygon(v, exVerts);
+            //         if (inside) console.log(`    new vertex inside existing`);
+            //         return inside;
+            //     });
+            //     const exInsideNew = exVerts.some(v => {
+            //         const isShared = newVerts.some(nv => Math.hypot(v.x - nv.x, v.y - nv.y) < 1.0);
+            //         const inside = !isShared && this._pointInPolygon(v, newVerts);
+            //         if (inside) console.log(`    existing vertex inside new`);
+            //         return inside;
+            //     });
+            //     if (newInsideEx || exInsideNew) return true;
+            // }
+            if (shared >= 2) {
+                // Find a shared edge (two adjacent vertices)
+                for (let i = 0; i < exVerts.length; i++) {
+                    const ep1 = exVerts[i];
+                    const ep2 = exVerts[(i+1) % exVerts.length];
+                    const v1match = newVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < 0.05);
+                    const v2match = newVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < 0.05);
+                    if (v1match && v2match) {
+                        const exCentroid = this._centroid(exVerts);
+                        const newCentroid = this._centroid(newVerts);
+                        if (!this._onOppositeSides(ep1, ep2, newCentroid, exCentroid)) return true;
+                        break;
+                    }
+                }
             }
             if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
         }
@@ -704,8 +714,11 @@ class InfiniteExplorer {
         };
     }
 
-    bboxesOverlap(b1, b2) {
-        return !(b1.maxX < b2.minX || b2.maxX < b1.minX || b1.maxY < b2.minY || b2.maxY < b1.minY);
+    bboxesOverlap(b1, b2, padding = 5) {
+    return !(b1.maxX + padding < b2.minX - padding || 
+             b2.maxX + padding < b1.minX - padding || 
+             b1.maxY + padding < b2.minY - padding || 
+             b2.maxY + padding < b1.minY - padding);
     }
 
     drawTileNumbers(tiling) {
