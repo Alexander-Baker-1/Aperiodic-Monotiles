@@ -109,7 +109,7 @@ class InfiniteExplorer {
         const retryCount = new Map(); // track retries per tile
     
         let safety = 0;
-        while (tiling.tiles.length < targetCount && safety < 100) {
+        while (tiling.tiles.length < targetCount && safety < 500) {
             console.log(`frontier: [${frontier.map(t => tiling.tiles.indexOf(t))}]`);
             safety++;
     
