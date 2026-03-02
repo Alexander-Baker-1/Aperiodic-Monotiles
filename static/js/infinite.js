@@ -523,14 +523,20 @@ class InfiniteExplorer {
             if (shared >= 9) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
             if (shared >= 5) return true;
-            if (shared === 3) {
-                const hasInterior = newVerts.some(v => {
-                    const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 0.05);
+            if (shared === 3 || shared === 4) {
+                const newInsideEx = newVerts.some(v => {
+                    const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 1.0); // increased from 0.05
                     const inside = !isShared && this._pointInPolygon(v, exVerts);
-                    if (inside) console.log(`  point inside polygon detected`);
+                    if (inside) console.log(`    new vertex inside existing tile`);
                     return inside;
                 });
-                if (hasInterior) return true;
+                const exInsideNew = exVerts.some(v => {
+                    const isShared = newVerts.some(nv => Math.hypot(v.x - nv.x, v.y - nv.y) < 1.0); // increased from 0.05
+                    const inside = !isShared && this._pointInPolygon(v, newVerts);
+                    if (inside) console.log(`    existing vertex inside new tile`);
+                    return inside;
+                });
+                if (newInsideEx || exInsideNew) return true;
             }
             if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
         }
