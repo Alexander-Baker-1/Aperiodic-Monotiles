@@ -150,15 +150,42 @@ class InfiniteExplorer {
         this.rootTile = tiling.tiles[0];
         this._addToGrid(tiling.tiles[0]);
 
-        const TARGET_TILES = 30;
+        const TARGET_TILES = 35;
         this.backtrackingFill(tiling, TARGET_TILES);
-
+        //this._reorderTilesBFS(tiling);
         tiling.render(this.ctx, 0);
         this.drawTileNumbers(tiling);
         for (const tile of tiling.tiles) {
             tile.drawLabels(this.ctx);
         }
     }
+
+    // _reorderTilesBFS(tiling) {
+    //     const root = tiling.tiles[0];
+    //     const visited = new Set();
+    //     const queue = [root];
+    //     const ordered = [];
+    //     visited.add(root);
+    
+    //     while (queue.length > 0) {
+    //         const tile = queue.shift();
+    //         ordered.push(tile);
+    //         // Visit all neighbors via occupiedEdges
+    //         for (const [_, neighbor] of tile.occupiedEdges) {
+    //             if (neighbor && typeof neighbor === 'object' && !visited.has(neighbor)) {
+    //                 visited.add(neighbor);
+    //                 queue.push(neighbor);
+    //             }
+    //         }
+    //     }
+    
+    //     // Any tiles not reachable via occupiedEdges (shouldn't happen, but be safe)
+    //     for (const tile of tiling.tiles) {
+    //         if (!visited.has(tile)) ordered.push(tile);
+    //     }
+    
+    //     tiling.tiles = ordered;
+    // }
 
     _pointInPolygon(point, polygon) {
         let inside = false;
@@ -590,16 +617,26 @@ class InfiniteExplorer {
                 if (shared >= 5) return true;
             }
             if (shared >= 2) {
+                const exCentroid = this._centroid(exVerts);
+                const newCentroid = this._centroid(newVerts);
+                
                 for (let i = 0; i < exVerts.length; i++) {
                     const ep1 = exVerts[i];
                     const ep2 = exVerts[(i+1) % exVerts.length];
                     const v1match = newVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < 0.05);
                     const v2match = newVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < 0.05);
                     if (v1match && v2match) {
-                        const exCentroid = this._centroid(exVerts);
-                        const newCentroid = this._centroid(newVerts);
                         if (!this._onOppositeSides(ep1, ep2, newCentroid, exCentroid)) return true;
-                        break;
+                    }
+                }
+                
+                for (let i = 0; i < newVerts.length; i++) {
+                    const ep1 = newVerts[i];
+                    const ep2 = newVerts[(i+1) % newVerts.length];
+                    const v1match = exVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < 0.05);
+                    const v2match = exVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < 0.05);
+                    if (v1match && v2match) {
+                        if (!this._onOppositeSides(ep1, ep2, exCentroid, newCentroid)) return true;
                     }
                 }
             }
