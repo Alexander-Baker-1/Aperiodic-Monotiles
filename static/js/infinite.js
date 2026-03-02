@@ -150,14 +150,14 @@ class InfiniteExplorer {
         this.rootTile = tiling.tiles[0];
         this._addToGrid(tiling.tiles[0]);
 
-        const TARGET_TILES = 36;
+        const TARGET_TILES = 300;
         this.backtrackingFill(tiling, TARGET_TILES);
         //this._reorderTilesBFS(tiling);
         tiling.render(this.ctx, 0);
-        this.drawTileNumbers(tiling);
-        for (const tile of tiling.tiles) {
-            tile.drawLabels(this.ctx);
-        }
+        // this.drawTileNumbers(tiling);
+        // for (const tile of tiling.tiles) {
+        //     tile.drawLabels(this.ctx);
+        // }
     }
 
     // _reorderTilesBFS(tiling) {
@@ -206,7 +206,7 @@ class InfiniteExplorer {
         const retryCount = new Map();
 
         let safety = 0;
-        while (tiling.tiles.length < targetCount && safety < 1000) {
+        while (tiling.tiles.length < targetCount && safety < 10000) {
             console.log(`frontier: [${frontier.map(t => tiling.tiles.indexOf(t))}]`);
             safety++;
 
