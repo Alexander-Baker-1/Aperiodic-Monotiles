@@ -150,7 +150,7 @@ class InfiniteExplorer {
         this.rootTile = tiling.tiles[0];
         this._addToGrid(tiling.tiles[0]);
 
-        const TARGET_TILES = 50;
+        const TARGET_TILES = 36;
         this.backtrackingFill(tiling, TARGET_TILES);
         //this._reorderTilesBFS(tiling);
         tiling.render(this.ctx, 0);
@@ -250,7 +250,7 @@ class InfiniteExplorer {
                     for (const t of tiling.tiles) {
                         for (const [e, occupier] of [...t.occupiedEdges]) {
                             if (occupier === neighbor) {
-                                console.log(`    clearing edge ${e} of tile ${tiling.tiles.indexOf(t)}`);
+                                // console.log(`    clearing edge ${e} of tile ${tiling.tiles.indexOf(t)}`);
                                 t.occupiedEdges.delete(e);
                             }
                         }
@@ -322,7 +322,7 @@ class InfiniteExplorer {
         const tileIdx = tiling.tiles.indexOf(tile);
 
         console.group(`fillOneTile: tile ${tileIdx} (flipped=${isFlipped})`);
-        console.log(`occupied edges at start:`, [...tile.occupiedEdges.keys()]);
+        // console.log(`occupied edges at start:`, [...tile.occupiedEdges.keys()]);
 
         for (const [e, occupier] of [...tile.occupiedEdges]) {
             if (occupier && !tiling.tiles.includes(occupier)) {
@@ -341,17 +341,17 @@ class InfiniteExplorer {
         }
 
         for (let edgeIdx = 0; edgeIdx < 14; edgeIdx++) {
-            console.log(`  edge ${edgeIdx}: occupier=${tiling.tiles.indexOf(tile.occupiedEdges.get(edgeIdx))}, initiallyOccupied=${initiallyOccupied.has(edgeIdx)}`);
+            // console.log(`  edge ${edgeIdx}: occupier=${tiling.tiles.indexOf(tile.occupiedEdges.get(edgeIdx))}, initiallyOccupied=${initiallyOccupied.has(edgeIdx)}`);
 
             if (initiallyOccupied.has(edgeIdx)) {
                 const initialOccupier = tile.occupiedEdges.get(edgeIdx);
-                console.log(`  edge ${edgeIdx}: already occupied by tile ${tiling.tiles.indexOf(initialOccupier)}`);
+                // console.log(`  edge ${edgeIdx}: already occupied by tile ${tiling.tiles.indexOf(initialOccupier)}`);
                 continue;
             }
 
             const occupier = tile.occupiedEdges.get(edgeIdx);
             if (occupier && placed.some(p => p.neighbor === occupier)) {
-                console.log(`  edge ${edgeIdx}: filled by neighbor tile ${tiling.tiles.indexOf(occupier)}`);
+                // console.log(`  edge ${edgeIdx}: filled by neighbor tile ${tiling.tiles.indexOf(occupier)}`);
                 continue;
             }
             tile.occupiedEdges.delete(edgeIdx);
@@ -359,7 +359,7 @@ class InfiniteExplorer {
             const entry = edgeCandidates[edgeIdx];
 
             if (entry.candidates.length === 0) {
-                console.log(`  edge ${edgeIdx}: no candidates, skipping`);
+                // console.log(`  edge ${edgeIdx}: no candidates, skipping`);
                 continue;
             }
 
@@ -377,7 +377,7 @@ class InfiniteExplorer {
                         filled = true;
                         break;
                     }
-                    console.warn(`    false duplicate on edge ${edgeIdx} — treating as rejection`);
+                    // console.warn(`    false duplicate on edge ${edgeIdx} — treating as rejection`);
                     continue;
                 } else if (result) {
                     const { neighbor } = result;
@@ -393,7 +393,7 @@ class InfiniteExplorer {
             }
 
             if (!filled && !tile.occupiedEdges.has(edgeIdx)) {
-                console.warn(`  edge ${edgeIdx}: ALL candidates exhausted — FAILING`);
+                // console.warn(`  edge ${edgeIdx}: ALL candidates exhausted — FAILING`);
                 console.groupEnd();
                 for (const { neighbor, parentEdge, neighborEdge } of placed) {
                     this._removeFromGrid(neighbor);
@@ -415,7 +415,7 @@ class InfiniteExplorer {
             if (!tile.occupiedEdges.has(e)) unoccupied.push(e);
         }
         if (unoccupied.length > 0) {
-            console.warn(`  tile still has unoccupied edges after fill: ${unoccupied} — FAILING`);
+            // console.warn(`  tile still has unoccupied edges after fill: ${unoccupied} — FAILING`);
             for (const { neighbor, parentEdge, neighborEdge } of placed) {
                 this._removeFromGrid(neighbor);
                 this._invalidateCache(neighbor);
@@ -431,9 +431,9 @@ class InfiniteExplorer {
             return { success: false, placed: [] };
         }
 
-        console.log(`  done. placed ${placed.length} new tiles`);
+        // console.log(`  done. placed ${placed.length} new tiles`);
         for (const p of placed) {
-            console.log(`    tile ${tiling.tiles.indexOf(p.neighbor)} on edge ${p.parentEdge} via sourceEdge=${p.neighborEdge}`);
+            // console.log(`    tile ${tiling.tiles.indexOf(p.neighbor)} on edge ${p.parentEdge} via sourceEdge=${p.neighborEdge}`);
         }
         console.groupEnd();
         return { success: true, placed };
@@ -553,7 +553,7 @@ class InfiniteExplorer {
 
         const conflict = this.hasGeometricConflict(neighbor, tiling.tiles, entry.tile);
         if (!dryRun) {
-            console.log(`    conflict check: ${conflict}`);
+            // .log(`    conflict check: ${conflict}`);
         }
         if (conflict === 'duplicate') return 'duplicate';
         if (conflict) return null;
@@ -597,7 +597,7 @@ class InfiniteExplorer {
             }
 
             const shared = this.countSharedVertices(newVerts, exVerts);
-            if (shared > 0) console.log(`    shared=${shared}`);
+            // if (shared > 0) console.log(`    shared=${shared}`);
             if (shared >= 9) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
             if (newTile.color === Tile.COLORS.DARK_BLUE || existingTile.color === Tile.COLORS.DARK_BLUE) {
@@ -767,7 +767,7 @@ class InfiniteExplorer {
 
             const blocked = constraints.blocks.some(([be, bs]) => be === rootEdge && bs === sourceEdgeNum);
             if (blocked) {
-                console.log(`  _isBlocked: edge ${rootEdge} sourceEdge ${sourceEdgeNum} blocked by placed edge ${placedEdge}`);
+                // console.log(`  _isBlocked: edge ${rootEdge} sourceEdge ${sourceEdgeNum} blocked by placed edge ${placedEdge}`);
                 return true;
             }
         }
