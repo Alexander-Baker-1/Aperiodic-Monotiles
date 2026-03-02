@@ -167,10 +167,10 @@ class ConstraintTester {
         // IMPORTANT: no manual flip here
         const baseTransform = translation.multiply(scaling);
     
-        
-
-        const rootTile = this.tiling.addRootTile(baseTransform, Tile.LIGHT_BLUE);
-        rootTile.transform = rootTile.transform.multiply(Matrix.scale(-1, 1)); // flip root
+        const rootTile = this.tiling.addRootTile(
+            baseTransform,
+            Tile.DARK_BLUE // color determines chirality
+        );
     
         rootTile.occupiedEdges = [];
         rootTile.tileIndex = 0;
@@ -500,9 +500,9 @@ class ConstraintTester {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
         this.tiling.draw(this.ctx, 0);
-        // this.tiling.drawVertexLabels(this.ctx);
+        this.tiling.drawVertexLabels(this.ctx);
         
-        // this.drawTileNumbers();
+        this.drawTileNumbers();
     }
     
     drawTileNumbers() {
