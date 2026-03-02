@@ -79,7 +79,7 @@ class InfiniteExplorer {
         tiling.addRootTile(rootTransform, rootColor);
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 18;
+        const TARGET_TILES = 22;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         tiling.render(this.ctx, 0);
@@ -522,7 +522,11 @@ class InfiniteExplorer {
             const shared = this.countSharedVertices(newVerts, exVerts);
             if (shared >= 9) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
-            if (shared >= 5) return true;
+            if (newTile.color === Tile.COLORS.DARK_BLUE || existingTile.color === Tile.COLORS.DARK_BLUE) {
+                if (shared >= 7) return true;
+            } else {
+                if (shared >= 5) return true;
+            }
             if (shared === 3 || shared === 4) {
                 const newInsideEx = newVerts.some(v => {
                     const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 1.0); // increased from 0.05
