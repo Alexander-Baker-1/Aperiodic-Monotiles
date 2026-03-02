@@ -520,6 +520,15 @@ class InfiniteExplorer {
             if (!this.bboxesOverlap(newBBox, exBBox)) continue;
     
             const shared = this.countSharedVertices(newVerts, exVerts);
+            console.log(`    shared=${shared}`);
+            if (shared === 3 || shared === 4) {
+                console.log(`    shared=${shared} — entering pip block`);
+                for (const v of newVerts) {
+                    const inside = this._pointInPolygon(v, exVerts);
+                    const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 1.0);
+                    if (inside) console.log(`    vertex (${v.x.toFixed(1)}, ${v.y.toFixed(1)}) inside=${inside} isShared=${isShared}`);
+                }
+            }
             if (shared >= 9) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
             if (newTile.color === Tile.COLORS.DARK_BLUE || existingTile.color === Tile.COLORS.DARK_BLUE) {
@@ -529,20 +538,81 @@ class InfiniteExplorer {
             }
             if (shared === 3 || shared === 4) {
                 const newInsideEx = newVerts.some(v => {
-                    const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 1.0); // increased from 0.05
+                    const isShared = exVerts.some(ev => Math.hypot(v.x - ev.x, v.y - ev.y) < 1.0);
                     const inside = !isShared && this._pointInPolygon(v, exVerts);
-                    if (inside) console.log(`    new vertex inside existing tile`);
+                    if (inside) console.log(`    new vertex inside existing`);
                     return inside;
                 });
                 const exInsideNew = exVerts.some(v => {
-                    const isShared = newVerts.some(nv => Math.hypot(v.x - nv.x, v.y - nv.y) < 1.0); // increased from 0.05
+                    const isShared = newVerts.some(nv => Math.hypot(v.x - nv.x, v.y - nv.y) < 1.0);
                     const inside = !isShared && this._pointInPolygon(v, newVerts);
-                    if (inside) console.log(`    existing vertex inside new tile`);
+                    if (inside) console.log(`    existing vertex inside new`);
                     return inside;
                 });
                 if (newInsideEx || exInsideNew) return true;
             }
             if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
+        }
+        return false;
+    }
+
+    _polygonIntersectionArea(polyA, polyB) {
+        let output = [...polyA];
+        for (let i = 0; i < polyB.length; i++) {
+            if (output.length === 0) return 0;
+            const input = output;
+            output = [];
+            const edgeStart = polyB[i];
+            const edgeEnd = polyB[(i + 1) % polyB.length];
+            for (let j = 0; j < input.length; j++) {
+                const current = input[j];
+                const previous = input[(j + input.length - 1) % input.length];
+                const currentInside = (edgeEnd.x - edgeStart.x) * (current.y - edgeStart.y) - (edgeEnd.y - edgeStart.y) * (current.x - edgeStart.x) >= 0;
+                const previousInside = (edgeEnd.x - edgeStart.x) * (previous.y - edgeStart.y) - (edgeEnd.y - edgeStart.y) * (previous.x - edgeStart.x) >= 0;
+                if (currentInside) {
+                    if (!previousInside) {
+                        output.push(this._lineIntersect(previous, current, edgeStart, edgeEnd));
+                    }
+                    output.push(current);
+                } else if (previousInside) {
+                    output.push(this._lineIntersect(previous, current, edgeStart, edgeEnd));
+                }
+            }
+        }
+        // Compute area of intersection polygon
+        let area = 0;
+        for (let i = 0; i < output.length; i++) {
+            const j = (i + 1) % output.length;
+            area += output[i].x * output[j].y;
+            area -= output[j].x * output[i].y;
+        }
+        return Math.abs(area) / 2;
+    }
+    
+    _lineIntersect(p1, p2, p3, p4) {
+        const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
+        const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
+        const t = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / (d1x * d2y - d1y * d2x);
+        return { x: p1.x + t * d1x, y: p1.y + t * d1y };
+    }
+
+    _edgesIntersect(p1, p2, p3, p4) {
+        const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
+        const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
+        const cross = d1x * d2y - d1y * d2x;
+        if (Math.abs(cross) < 0.001) return false;
+        const t = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / cross;
+        const u = ((p3.x - p1.x) * d1y - (p3.y - p1.y) * d1x) / cross;
+        return t > 0.001 && t < 0.999 && u > 0.001 && u < 0.999;
+    }
+    
+    _polygonsIntersectEdges(vertsA, vertsB) {
+        for (let i = 0; i < vertsA.length; i++) {
+            const a1 = vertsA[i], a2 = vertsA[(i + 1) % vertsA.length];
+            for (let j = 0; j < vertsB.length; j++) {
+                const b1 = vertsB[j], b2 = vertsB[(j + 1) % vertsB.length];
+                if (this._edgesIntersect(a1, a2, b1, b2)) return true;
+            }
         }
         return false;
     }
@@ -681,6 +751,11 @@ class InfiniteExplorer {
             if (placedSourceEdge === null || placedSourceEdge === undefined) continue;
     
             const constraints = this.edgeConstraints[placedEdge]?.[placedSourceEdge];
+            
+            if (rootEdge === 1 && sourceEdgeNum === 10) {
+                console.log(`    _isBlocked check: rootEdge=1 sourceEdge=10, placedEdge=${placedEdge}, placedSourceEdge=${placedSourceEdge}, constraints=${JSON.stringify(constraints)}`);
+            }
+    
             if (!constraints) continue;
     
             const blocked = constraints.blocks.some(([be, bs]) => be === rootEdge && bs === sourceEdgeNum);
