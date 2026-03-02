@@ -150,7 +150,7 @@ class InfiniteExplorer {
         this.rootTile = tiling.tiles[0];
         this._addToGrid(tiling.tiles[0]);
 
-        const TARGET_TILES = 35;
+        const TARGET_TILES = 50;
         this.backtrackingFill(tiling, TARGET_TILES);
         //this._reorderTilesBFS(tiling);
         tiling.render(this.ctx, 0);
@@ -311,6 +311,7 @@ class InfiniteExplorer {
     }
 
     _fillOneTile(tile, tiling, targetCount) {
+        
         if (tile.flipped) {
             const placed = this._fillDarkBlueTile(tile, tiling);
             return { success: true, placed };
@@ -478,7 +479,6 @@ class InfiniteExplorer {
                 const ep2 = exVerts[(e + 1) % 14];
                 const v1shared = newVerts.some(v => {
                     const d = Math.hypot(v.x - ep1.x, v.y - ep1.y);
-                    if (d < 2.0) console.log(`  ep1 dist: ${d.toFixed(4)}`);
                     return d < TOL;
                 });
                 const v2shared = newVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < TOL);
@@ -523,7 +523,6 @@ class InfiniteExplorer {
 
         lightBlue = lightBlue.filter(c => !this._isBlocked(tile, c.rootEdge, c.sourceEdgeNum));
         darkBlue  = darkBlue.filter(c =>  !this._isBlocked(tile, c.rootEdge, c.sourceEdgeNum));
-        console.log(`  _buildCandidates: edge ${rootEdge} -> ${lightBlue.length} light + ${darkBlue.length} dark after filter`);
 
         for (let i = lightBlue.length - 1; i > 0; i--) {
             const j = Math.floor(this.seededRandom() * (i + 1));
@@ -554,16 +553,7 @@ class InfiniteExplorer {
 
         const conflict = this.hasGeometricConflict(neighbor, tiling.tiles, entry.tile);
         if (!dryRun) {
-            console.log(`    conflict check: ${conflict}, shared verts with each tile:`);
-            const newVerts = this.getTransformedVertices(neighbor);
-            const newBB = this.getBoundingBox(newVerts);
-            const nearby = this._nearbyTiles(newBB);
-            for (const t of nearby) {
-                if (t === entry.tile) continue;
-                const exVerts = this.getTransformedVertices(t);
-                const shared = this.countSharedVertices(newVerts, exVerts);
-                if (shared > 0) console.log(`      vs tile ${tiling.tiles.indexOf(t)}: shared=${shared}`);
-            }
+            console.log(`    conflict check: ${conflict}`);
         }
         if (conflict === 'duplicate') return 'duplicate';
         if (conflict) return null;
@@ -603,12 +593,11 @@ class InfiniteExplorer {
             const exVerts = this.getTransformedVertices(existingTile);
             const exBBox = this._cachedBBox(existingTile);
             if (!this.bboxesOverlap(newBBox, exBBox)) {
-                console.log(`    skipping tile due to bbox`);
                 continue;
             }
 
             const shared = this.countSharedVertices(newVerts, exVerts);
-            console.log(`    shared=${shared}`);
+            if (shared > 0) console.log(`    shared=${shared}`);
             if (shared >= 9) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
             if (newTile.color === Tile.COLORS.DARK_BLUE || existingTile.color === Tile.COLORS.DARK_BLUE) {
@@ -773,10 +762,6 @@ class InfiniteExplorer {
             if (placedSourceEdge === null || placedSourceEdge === undefined) continue;
 
             const constraints = this.edgeConstraints[placedEdge]?.[placedSourceEdge];
-
-            if (rootEdge === 1 && sourceEdgeNum === 10) {
-                console.log(`    _isBlocked check: rootEdge=1 sourceEdge=10, placedEdge=${placedEdge}, placedSourceEdge=${placedSourceEdge}, constraints=${JSON.stringify(constraints)}`);
-            }
 
             if (!constraints) continue;
 
