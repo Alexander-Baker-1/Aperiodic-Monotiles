@@ -79,7 +79,7 @@ class InfiniteExplorer {
         tiling.addRootTile(rootTransform, rootColor);
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 16;
+        const TARGET_TILES = 18;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         tiling.render(this.ctx, 0);
@@ -163,6 +163,7 @@ class InfiniteExplorer {
                     const idx = tiling.tiles.indexOf(neighbor);
                     if (idx >= 0) tiling.tiles.splice(idx, 1);
                     last.tile.occupiedEdges.delete(parentEdge);
+                    last.tile.algorithmPlacedEdges?.delete(parentEdge);
                     neighbor.occupiedEdges.delete(neighborEdge);
                     const fi = frontier.indexOf(neighbor);
                     if (fi >= 0) frontier.splice(fi, 1);
@@ -241,7 +242,7 @@ class InfiniteExplorer {
         }
     
         for (let edgeIdx = 0; edgeIdx < 14; edgeIdx++) {
-            if (tiling.tiles.length >= targetCount) break;
+            console.log(`  edge ${edgeIdx}: occupier=${tiling.tiles.indexOf(tile.occupiedEdges.get(edgeIdx))}, initiallyOccupied=${initiallyOccupied.has(edgeIdx)}`);
     
             // Skip if occupied before we started
             if (initiallyOccupied.has(edgeIdx)) {
@@ -288,6 +289,8 @@ class InfiniteExplorer {
                     this.markSharedEdges(neighbor, tiling.tiles);
                     // Explicitly mark only this edge as occupied by neighbor
                     tile.occupiedEdges.set(edgeIdx, neighbor);
+                    tile.algorithmPlacedEdges = tile.algorithmPlacedEdges || new Set();
+                    tile.algorithmPlacedEdges.add(edgeIdx);
                     placed.push({ neighbor, parentEdge: edgeIdx, neighborEdge: candidate.sourceEdgeNum });
 
                     // Eagerly check if this placement created a dead end on any neighbor
@@ -440,6 +443,7 @@ class InfiniteExplorer {
     
         lightBlue = lightBlue.filter(c => !this._isBlocked(tile, c.rootEdge, c.sourceEdgeNum));
         darkBlue = darkBlue.filter(c => !this._isBlocked(tile, c.rootEdge, c.sourceEdgeNum));
+        console.log(`  _buildCandidates: edge ${rootEdge} -> ${lightBlue.length} light + ${darkBlue.length} dark after filter`);
 
         // Shuffle light blue only
         for (let i = lightBlue.length - 1; i > 0; i--) {
@@ -657,21 +661,23 @@ class InfiniteExplorer {
     }
 
     _isBlocked(tile, rootEdge, sourceEdgeNum) {
-        // Check all already-placed neighbors on this tile
+        const algorithmEdges = tile.algorithmPlacedEdges || new Set();
         for (const [placedEdge, neighbor] of tile.occupiedEdges) {
+            if (!algorithmEdges.has(placedEdge)) continue;
             if (!neighbor || typeof neighbor !== 'object') continue;
-            // Find what sourceEdge was used for this placed neighbor
-            const placedSourceEdge = neighbor.occupiedEdges ? 
-                [...neighbor.occupiedEdges.entries()].find(([e, t]) => t === tile)?.[0] : null;
+    
+            const placedSourceEdge = [...neighbor.occupiedEdges.entries()]
+                .find(([e, t]) => t === tile)?.[0];
             if (placedSourceEdge === null || placedSourceEdge === undefined) continue;
-            
-            // Look up constraints for this placed connection
+    
             const constraints = this.edgeConstraints[placedEdge]?.[placedSourceEdge];
             if (!constraints) continue;
-            
-            // Check if [rootEdge, sourceEdgeNum] is in the blocked list
+    
             const blocked = constraints.blocks.some(([be, bs]) => be === rootEdge && bs === sourceEdgeNum);
-            if (blocked) return true;
+            if (blocked) {
+                console.log(`  _isBlocked: edge ${rootEdge} sourceEdge ${sourceEdgeNum} blocked by placed edge ${placedEdge}`);
+                return true;
+            }
         }
         return false;
     }
