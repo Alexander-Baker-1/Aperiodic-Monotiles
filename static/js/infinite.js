@@ -32,7 +32,8 @@ class InfiniteExplorer {
     }
 
     randomSeed() {
-        this.seed = Math.floor(Math.random() * 1000000);
+        //this.seed = Math.floor(Math.random() * 1000000);
+        this.seed = 244952;
         document.getElementById('seed').value = this.seed;
         this.generate();
     }
@@ -78,7 +79,7 @@ class InfiniteExplorer {
         tiling.addRootTile(rootTransform, rootColor);
         this.rootTile = tiling.tiles[0];
 
-        const TARGET_TILES = 12;
+        const TARGET_TILES = 16;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         tiling.render(this.ctx, 0);
@@ -109,6 +110,7 @@ class InfiniteExplorer {
     
         let safety = 0;
         while (tiling.tiles.length < targetCount && safety < 100) {
+            console.log(`frontier: [${frontier.map(t => tiling.tiles.indexOf(t))}]`);
             safety++;
     
             if (frontier.length === 0) break;
@@ -121,8 +123,7 @@ class InfiniteExplorer {
             }
     
             const retries = retryCount.get(tile) || 0;
-            if (retries > 3) {
-                // Give up on this tile, move on
+            if (retries > 50) {
                 frontier.shift();
                 processed.add(tile);
                 continue;
