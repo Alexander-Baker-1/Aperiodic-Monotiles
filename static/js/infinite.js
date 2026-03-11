@@ -6,6 +6,16 @@ import { Transform } from './common/Transform.js';
 const SPATIAL_CELL_SIZE = 100;
 
 class InfiniteExplorer {
+    static PRESETS = {
+        chevron: { a: 0,            b: 1,            name: 'Chevron'    },
+        tile14:  { a: 1,            b: 4,            name: 'Tile (1,4)' },
+        hat:     { a: 1,            b: Math.sqrt(3), name: 'Hat'        },
+        tile11:  { a: 1,            b: 1,            name: 'Tile (1,1)' },
+        turtle:  { a: Math.sqrt(3), b: 1,            name: 'Turtle'     },
+        tile41:  { a: 4,            b: 1,            name: 'Tile (4,1)' },
+        comet:   { a: 1,            b: 0,            name: 'Comet'      }
+    };
+
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
@@ -24,19 +34,67 @@ class InfiniteExplorer {
             }
         };
 
+        // Debounced generate for slider input
+        const debouncedGenerate = this._debounce(() => this.generate(), 300);
+
+        ['a', 'b', 'curve'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                document.getElementById(`${id}-val`).textContent =
+                    parseFloat(document.getElementById(id).value).toFixed(3);
+                debouncedGenerate();
+            });
+        });
+
+        this.shouldFlip  = false;
+        this.randomAngle = 0;
+        // Set hat sliders before randomSeed so first generate() reads correct a/b
+        document.getElementById('a').value = InfiniteExplorer.PRESETS.hat.a;
+        document.getElementById('b').value = InfiniteExplorer.PRESETS.hat.b;
+        document.getElementById('curve').value = 0;
+        document.getElementById('a-val').textContent = parseFloat(InfiniteExplorer.PRESETS.hat.a).toFixed(3);
+        document.getElementById('b-val').textContent = parseFloat(InfiniteExplorer.PRESETS.hat.b).toFixed(3);
+        document.getElementById('curve-val').textContent = '0.000';
         this.randomSeed();
     }
+
+    // ─── Presets ──────────────────────────────────────────────────────────────
+
+    loadPreset(presetKey) {
+        const preset = InfiniteExplorer.PRESETS[presetKey];
+        document.getElementById('a').value = preset.a;
+        document.getElementById('b').value = preset.b;
+        document.getElementById('curve').value = 0;
+        document.getElementById('a-val').textContent = parseFloat(preset.a).toFixed(3);
+        document.getElementById('b-val').textContent = parseFloat(preset.b).toFixed(3);
+        document.getElementById('curve-val').textContent = '0.000';
+        this.generate();
+    }
+
+    // ─── Debounce ─────────────────────────────────────────────────────────────
+
+    _debounce(fn, delay) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+
+    // ─── Seed ─────────────────────────────────────────────────────────────────
 
     setSeed(seed) {
         this.seed = seed;
         document.getElementById('seed').value = this.seed;
+        this.shouldFlip = this.seededRandom() < 0.5;
+        this.randomAngle = this.seededRandom() * 2 * Math.PI;
         this.generate();
     }
 
     randomSeed() {
-        //this.seed = Math.floor(Math.random() * 1000000);
-        this.seed = 244952;
+        this.seed = Math.floor(Math.random() * 1000000);
         document.getElementById('seed').value = this.seed;
+        this.shouldFlip = this.seededRandom() < 0.5;
+        this.randomAngle = this.seededRandom() * 2 * Math.PI;
         this.generate();
     }
 
@@ -45,10 +103,10 @@ class InfiniteExplorer {
         return this.seed / 0x7fffffff;
     }
 
-    // ─── Vertex / bbox cache ───────────────────────────────────────────────────
+    // ─── Vertex / bbox cache ──────────────────────────────────────────────────
 
-    _vertsCache = new Map();   // tile -> Float32Array-ish [{x,y}]
-    _bboxCache  = new Map();   // tile -> {minX,maxX,minY,maxY}
+    _vertsCache = new Map();
+    _bboxCache  = new Map();
 
     _invalidateCache(tile) {
         this._vertsCache.delete(tile);
@@ -71,7 +129,7 @@ class InfiniteExplorer {
 
     // ─── Spatial grid ─────────────────────────────────────────────────────────
 
-    _spatialGrid = new Map();   // "gx,gy" -> Set<tile>
+    _spatialGrid = new Map();
 
     _gridCells(bb) {
         const x1 = Math.floor((bb.minX - SPATIAL_CELL_SIZE) / SPATIAL_CELL_SIZE);
@@ -112,26 +170,29 @@ class InfiniteExplorer {
     // ─── Generate ─────────────────────────────────────────────────────────────
 
     generate() {
-        // Reset caches on new generation
+        if (this.shouldFlip === undefined || this.randomAngle === undefined) return;
+
         this._vertsCache = new Map();
         this._bboxCache  = new Map();
         this._spatialGrid = new Map();
 
         const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = 800 * dpr;
-        this.canvas.height = 600 * dpr;
-        this.canvas.style.width = '800px';
-        this.canvas.style.height = '600px';
+        this.canvas.width = 1200 * dpr;
+        this.canvas.height = 800 * dpr;
+        this.canvas.style.width = '1200px';
+        this.canvas.style.height = '800px';
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         this.ctx.fillStyle = '#fff';
         this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
 
-        const geometry = new HatGeometry(1, Math.sqrt(3));
+        const a = Math.max(parseFloat(document.getElementById('a').value), 0.001);
+        const b = Math.max(parseFloat(document.getElementById('b').value), 0.001);
+        const geometry = new HatGeometry(a, b);
         const tiling = new TilingSystem(geometry);
 
-        const shouldFlip = this.seededRandom() < 0.5;
+        const shouldFlip = this.shouldFlip;
+        const randomAngle = this.randomAngle;
         const rootColor = shouldFlip ? Tile.COLORS.DARK_BLUE : Tile.COLORS.LIGHT_BLUE;
-        const randomAngle = this.seededRandom() * 2 * Math.PI;
 
         let rootTransform = Transform.identity()
             .multiply(Transform.translation(this.canvas.width / 2, this.canvas.height / 2))
@@ -152,40 +213,10 @@ class InfiniteExplorer {
 
         const TARGET_TILES = 300;
         this.backtrackingFill(tiling, TARGET_TILES);
-        //this._reorderTilesBFS(tiling);
-        tiling.render(this.ctx, 0);
-        // this.drawTileNumbers(tiling);
-        // for (const tile of tiling.tiles) {
-        //     tile.drawLabels(this.ctx);
-        // }
-    }
 
-    // _reorderTilesBFS(tiling) {
-    //     const root = tiling.tiles[0];
-    //     const visited = new Set();
-    //     const queue = [root];
-    //     const ordered = [];
-    //     visited.add(root);
-    
-    //     while (queue.length > 0) {
-    //         const tile = queue.shift();
-    //         ordered.push(tile);
-    //         // Visit all neighbors via occupiedEdges
-    //         for (const [_, neighbor] of tile.occupiedEdges) {
-    //             if (neighbor && typeof neighbor === 'object' && !visited.has(neighbor)) {
-    //                 visited.add(neighbor);
-    //                 queue.push(neighbor);
-    //             }
-    //         }
-    //     }
-    
-    //     // Any tiles not reachable via occupiedEdges (shouldn't happen, but be safe)
-    //     for (const tile of tiling.tiles) {
-    //         if (!visited.has(tile)) ordered.push(tile);
-    //     }
-    
-    //     tiling.tiles = ordered;
-    // }
+        const curve = parseFloat(document.getElementById('curve').value);
+        tiling.render(this.ctx, curve);
+    }
 
     _pointInPolygon(point, polygon) {
         let inside = false;
@@ -250,13 +281,11 @@ class InfiniteExplorer {
                     for (const t of tiling.tiles) {
                         for (const [e, occupier] of [...t.occupiedEdges]) {
                             if (occupier === neighbor) {
-                                // console.log(`    clearing edge ${e} of tile ${tiling.tiles.indexOf(t)}`);
                                 t.occupiedEdges.delete(e);
                             }
                         }
                     }
 
-                    // Remove from spatial grid and caches
                     this._removeFromGrid(neighbor);
                     this._invalidateCache(neighbor);
 
@@ -311,7 +340,6 @@ class InfiniteExplorer {
     }
 
     _fillOneTile(tile, tiling, targetCount) {
-        
         if (tile.flipped) {
             const placed = this._fillDarkBlueTile(tile, tiling);
             return { success: true, placed };
@@ -322,7 +350,6 @@ class InfiniteExplorer {
         const tileIdx = tiling.tiles.indexOf(tile);
 
         console.group(`fillOneTile: tile ${tileIdx} (flipped=${isFlipped})`);
-        // console.log(`occupied edges at start:`, [...tile.occupiedEdges.keys()]);
 
         for (const [e, occupier] of [...tile.occupiedEdges]) {
             if (occupier && !tiling.tiles.includes(occupier)) {
@@ -341,27 +368,14 @@ class InfiniteExplorer {
         }
 
         for (let edgeIdx = 0; edgeIdx < 14; edgeIdx++) {
-            // console.log(`  edge ${edgeIdx}: occupier=${tiling.tiles.indexOf(tile.occupiedEdges.get(edgeIdx))}, initiallyOccupied=${initiallyOccupied.has(edgeIdx)}`);
-
-            if (initiallyOccupied.has(edgeIdx)) {
-                const initialOccupier = tile.occupiedEdges.get(edgeIdx);
-                // console.log(`  edge ${edgeIdx}: already occupied by tile ${tiling.tiles.indexOf(initialOccupier)}`);
-                continue;
-            }
+            if (initiallyOccupied.has(edgeIdx)) continue;
 
             const occupier = tile.occupiedEdges.get(edgeIdx);
-            if (occupier && placed.some(p => p.neighbor === occupier)) {
-                // console.log(`  edge ${edgeIdx}: filled by neighbor tile ${tiling.tiles.indexOf(occupier)}`);
-                continue;
-            }
+            if (occupier && placed.some(p => p.neighbor === occupier)) continue;
             tile.occupiedEdges.delete(edgeIdx);
 
             const entry = edgeCandidates[edgeIdx];
-
-            if (entry.candidates.length === 0) {
-                // console.log(`  edge ${edgeIdx}: no candidates, skipping`);
-                continue;
-            }
+            if (entry.candidates.length === 0) continue;
 
             console.log(`  edge ${edgeIdx}: trying ${entry.candidates.length} candidates`);
             let filled = false;
@@ -377,7 +391,6 @@ class InfiniteExplorer {
                         filled = true;
                         break;
                     }
-                    // console.warn(`    false duplicate on edge ${edgeIdx} — treating as rejection`);
                     continue;
                 } else if (result) {
                     const { neighbor } = result;
@@ -393,7 +406,6 @@ class InfiniteExplorer {
             }
 
             if (!filled && !tile.occupiedEdges.has(edgeIdx)) {
-                // console.warn(`  edge ${edgeIdx}: ALL candidates exhausted — FAILING`);
                 console.groupEnd();
                 for (const { neighbor, parentEdge, neighborEdge } of placed) {
                     this._removeFromGrid(neighbor);
@@ -415,7 +427,6 @@ class InfiniteExplorer {
             if (!tile.occupiedEdges.has(e)) unoccupied.push(e);
         }
         if (unoccupied.length > 0) {
-            // console.warn(`  tile still has unoccupied edges after fill: ${unoccupied} — FAILING`);
             for (const { neighbor, parentEdge, neighborEdge } of placed) {
                 this._removeFromGrid(neighbor);
                 this._invalidateCache(neighbor);
@@ -431,10 +442,6 @@ class InfiniteExplorer {
             return { success: false, placed: [] };
         }
 
-        // console.log(`  done. placed ${placed.length} new tiles`);
-        for (const p of placed) {
-            // console.log(`    tile ${tiling.tiles.indexOf(p.neighbor)} on edge ${p.parentEdge} via sourceEdge=${p.neighborEdge}`);
-        }
         console.groupEnd();
         return { success: true, placed };
     }
@@ -466,7 +473,6 @@ class InfiniteExplorer {
         const newVerts = this.getTransformedVertices(newTile);
         const TOL = 1.0;
 
-        // Only check nearby tiles via spatial grid
         const newBB = this._cachedBBox(newTile);
         const nearby = this._nearbyTiles(newBB);
 
@@ -477,10 +483,7 @@ class InfiniteExplorer {
             for (let e = 0; e < 14; e++) {
                 const ep1 = exVerts[e];
                 const ep2 = exVerts[(e + 1) % 14];
-                const v1shared = newVerts.some(v => {
-                    const d = Math.hypot(v.x - ep1.x, v.y - ep1.y);
-                    return d < TOL;
-                });
+                const v1shared = newVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < TOL);
                 const v2shared = newVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < TOL);
                 if (v1shared && v2shared) existingTile.occupiedEdges.set(e, newTile);
             }
@@ -552,9 +555,6 @@ class InfiniteExplorer {
         if (dist < 1.0) return null;
 
         const conflict = this.hasGeometricConflict(neighbor, tiling.tiles, entry.tile);
-        if (!dryRun) {
-            // .log(`    conflict check: ${conflict}`);
-        }
         if (conflict === 'duplicate') return 'duplicate';
         if (conflict) return null;
 
@@ -584,31 +584,32 @@ class InfiniteExplorer {
         const newVerts = this.getTransformedVertices(newTile);
         const newBBox = this.getBoundingBox(newVerts);
 
-        // Only check spatially nearby tiles
         const candidates = this._nearbyTiles(newBBox);
 
         for (const existingTile of candidates) {
             if (existingTile === parentTile) continue;
-            if (!existingTiles.includes(existingTile)) continue; // guard stale grid entries
+            if (!existingTiles.includes(existingTile)) continue;
             const exVerts = this.getTransformedVertices(existingTile);
             const exBBox = this._cachedBBox(existingTile);
-            if (!this.bboxesOverlap(newBBox, exBBox)) {
-                continue;
-            }
+            if (!this.bboxesOverlap(newBBox, exBBox)) continue;
 
             const shared = this.countSharedVertices(newVerts, exVerts);
-            // if (shared > 0) console.log(`    shared=${shared}`);
-            if (shared >= 9) return 'duplicate';
+            const uniqueCount = this._uniqueVertCount(newVerts);
+            const dupThresh   = Math.max(2, Math.round(uniqueCount * 0.64));
+            const darkThresh  = Math.max(2, Math.round(uniqueCount * 0.50));
+            const lightThresh = Math.max(2, Math.round(uniqueCount * 0.35));
+
+            if (shared >= dupThresh) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
             if (newTile.color === Tile.COLORS.DARK_BLUE || existingTile.color === Tile.COLORS.DARK_BLUE) {
-                if (shared >= 7) return true;
+                if (shared >= darkThresh) return true;
             } else {
-                if (shared >= 5) return true;
+                if (shared >= lightThresh) return true;
             }
             if (shared >= 2) {
                 const exCentroid = this._centroid(exVerts);
                 const newCentroid = this._centroid(newVerts);
-                
+
                 for (let i = 0; i < exVerts.length; i++) {
                     const ep1 = exVerts[i];
                     const ep2 = exVerts[(i+1) % exVerts.length];
@@ -618,7 +619,7 @@ class InfiniteExplorer {
                         if (!this._onOppositeSides(ep1, ep2, newCentroid, exCentroid)) return true;
                     }
                 }
-                
+
                 for (let i = 0; i < newVerts.length; i++) {
                     const ep1 = newVerts[i];
                     const ep2 = newVerts[(i+1) % newVerts.length];
@@ -675,13 +676,26 @@ class InfiniteExplorer {
 
     countSharedVertices(verts1, verts2) {
         const TOL = 0.05;
+        const unique1 = verts1.filter((v, i) =>
+            !verts1.slice(0, i).some(u => Math.hypot(u.x - v.x, u.y - v.y) < TOL)
+        );
+        const unique2 = verts2.filter((v, i) =>
+            !verts2.slice(0, i).some(u => Math.hypot(u.x - v.x, u.y - v.y) < TOL)
+        );
         let count = 0;
-        for (const v1 of verts1) {
-            for (const v2 of verts2) {
+        for (const v1 of unique1) {
+            for (const v2 of unique2) {
                 if (Math.hypot(v1.x - v2.x, v1.y - v2.y) < TOL) { count++; break; }
             }
         }
         return count;
+    }
+
+    _uniqueVertCount(verts) {
+        const TOL = 0.05;
+        return verts.filter((v, i) =>
+            !verts.slice(0, i).some(u => Math.hypot(u.x - v.x, u.y - v.y) < TOL)
+        ).length;
     }
 
     polygonsOverlap(poly1, poly2) {
@@ -762,14 +776,10 @@ class InfiniteExplorer {
             if (placedSourceEdge === null || placedSourceEdge === undefined) continue;
 
             const constraints = this.edgeConstraints[placedEdge]?.[placedSourceEdge];
-
             if (!constraints) continue;
 
             const blocked = constraints.blocks.some(([be, bs]) => be === rootEdge && bs === sourceEdgeNum);
-            if (blocked) {
-                // console.log(`  _isBlocked: edge ${rootEdge} sourceEdge ${sourceEdgeNum} blocked by placed edge ${placedEdge}`);
-                return true;
-            }
+            if (blocked) return true;
         }
         return false;
     }
@@ -876,3 +886,4 @@ window.regenerate = () => {
     explorer.setSeed(seed);
 };
 window.randomSeed = () => explorer.randomSeed();
+window.loadPreset  = (presetKey) => explorer.loadPreset(presetKey);
