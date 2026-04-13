@@ -630,7 +630,7 @@ class InfiniteExplorer {
                     }
                 }
             }
-            if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
+            if (shared === 0 && this._polygonsIntersectEdges(newVerts, exVerts)) return true;
         }
         return false;
     }
