@@ -17,25 +17,17 @@ export class TilingSystem {
         this.tiles.push(tile);
         return tile;
     }
+    
+    computeAttachedTransform(sourceTile, sourceEdgeIdx, targetEdgeIdx, color, reversed) {
+        const flipped = color === Tile.COLORS.DARK_BLUE;
 
-    addRootTile(transform, color = Tile.COLORS.LIGHT_BLUE) {
-        const flipped = color === Tile.COLORS.DARK_BLUE;
-        const tile = new Tile(this.geometry, transform, color, flipped);
-        this.tiles.push(tile);
-        return tile;
-    }
-    
-    computeAttachedTransform(sourceTile, sourceEdgeIdx, targetEdgeIdx, color) {
-        const flipped = color === Tile.COLORS.DARK_BLUE;
-        const reversed = sourceTile.flipped === flipped;
-    
         let p1 = sourceTile.getVertexWorldPos(sourceEdgeIdx);
         let p2 = sourceTile.getVertexWorldPos((sourceEdgeIdx + 1) % this.geometry.vertices.length);
         if (reversed) [p1, p2] = [p2, p1];
-    
+
         const sv1 = this.geometry.vertices[targetEdgeIdx];
         const sv2 = this.geometry.vertices[(targetEdgeIdx + 1) % this.geometry.vertices.length];
-    
+
         if (flipped) {
             const flip = Transform.flipX();
             const v1 = flip.transformPoint(sv1);

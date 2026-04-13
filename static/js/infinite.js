@@ -211,11 +211,13 @@ class InfiniteExplorer {
         this.rootTile = tiling.tiles[0];
         this._addToGrid(tiling.tiles[0]);
 
-        const TARGET_TILES = 300;
+        const TARGET_TILES = 50;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         const curve = parseFloat(document.getElementById('curve').value);
         tiling.render(this.ctx, curve);
+        tiling.tiles.forEach(tile => tile.drawLabels(this.ctx));
+        this.drawTileNumbers(tiling);
     }
 
     _pointInPolygon(point, polygon) {
@@ -237,7 +239,7 @@ class InfiniteExplorer {
         const retryCount = new Map();
 
         let safety = 0;
-        while (tiling.tiles.length < targetCount && safety < 10000) {
+        while (tiling.tiles.length < targetCount && safety < 100) {
             console.log(`frontier: [${frontier.map(t => tiling.tiles.indexOf(t))}]`);
             safety++;
 
@@ -538,8 +540,11 @@ class InfiniteExplorer {
     _tryPlace(entry, candidate, tiling, dryRun = false) {
         const { rootEdge, sourceEdgeNum, desiredColor } = candidate;
 
+        const constraint = this.edgeConstraints[rootEdge]?.[sourceEdgeNum];
+        const reversed = constraint?.reversed ?? (entry.tile.flipped === (desiredColor === Tile.COLORS.DARK_BLUE));
+
         const transform = tiling.computeAttachedTransform(
-            entry.tile, rootEdge, sourceEdgeNum, desiredColor
+            entry.tile, rootEdge, sourceEdgeNum, desiredColor, reversed
         );
 
         const neighbor = new Tile(tiling.geometry, transform, desiredColor, desiredColor === Tile.COLORS.DARK_BLUE);
@@ -549,14 +554,23 @@ class InfiniteExplorer {
         const parentCentroid = this._centroid(this.getTransformedVertices(entry.tile));
         const neighborCentroid = this._centroid(this.getTransformedVertices(neighbor));
 
-        if (!this._onOppositeSides(p1, p2, neighborCentroid, parentCentroid)) return null;
+        if (!this._onOppositeSides(p1, p2, neighborCentroid, parentCentroid)) {
+            console.log(`    rejected by oppositeSides (edge ${rootEdge})`);
+            return null;
+        }
 
         const dist = Math.hypot(neighborCentroid.x - parentCentroid.x, neighborCentroid.y - parentCentroid.y);
-        if (dist < 1.0) return null;
+        if (dist < 1.0) {
+            console.log(`    rejected by dist=${dist.toFixed(3)} (edge ${rootEdge})`);
+            return null;
+        }
 
         const conflict = this.hasGeometricConflict(neighbor, tiling.tiles, entry.tile);
         if (conflict === 'duplicate') return 'duplicate';
-        if (conflict) return null;
+        if (conflict) {
+            console.log(`    rejected by conflict=${conflict} (edge ${rootEdge})`);
+            return null;
+        }
 
         if (dryRun) return { neighbor };
 
@@ -595,17 +609,13 @@ class InfiniteExplorer {
 
             const shared = this.countSharedVertices(newVerts, exVerts);
             const uniqueCount = this._uniqueVertCount(newVerts);
-            const dupThresh   = Math.max(2, Math.round(uniqueCount * 0.64));
-            const darkThresh  = Math.max(2, Math.round(uniqueCount * 0.50));
-            const lightThresh = Math.max(2, Math.round(uniqueCount * 0.35));
+            const dupThresh = Math.max(2, Math.round(uniqueCount * 0.64));
+            
+            const existingIdx = existingTiles.indexOf(existingTile);
+            console.log(`      conflict check vs tile ${existingIdx}: shared=${shared}, dupThresh=${dupThresh}`);
 
             if (shared >= dupThresh) return 'duplicate';
             if (newTile.color === Tile.COLORS.DARK_BLUE && existingTile.color === Tile.COLORS.DARK_BLUE && shared > 0) return true;
-            if (newTile.color === Tile.COLORS.DARK_BLUE || existingTile.color === Tile.COLORS.DARK_BLUE) {
-                if (shared >= darkThresh) return true;
-            } else {
-                if (shared >= lightThresh) return true;
-            }
             if (shared >= 2) {
                 const exCentroid = this._centroid(exVerts);
                 const newCentroid = this._centroid(newVerts);
@@ -615,24 +625,27 @@ class InfiniteExplorer {
                     const ep2 = exVerts[(i+1) % exVerts.length];
                     const v1match = newVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < 0.05);
                     const v2match = newVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < 0.05);
-                    if (v1match && v2match) {
+                    if (v1match && v2match) {  // only check shared edges
                         if (!this._onOppositeSides(ep1, ep2, newCentroid, exCentroid)) return true;
-                    }
-                }
-
-                for (let i = 0; i < newVerts.length; i++) {
-                    const ep1 = newVerts[i];
-                    const ep2 = newVerts[(i+1) % newVerts.length];
-                    const v1match = exVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < 0.05);
-                    const v2match = exVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < 0.05);
-                    if (v1match && v2match) {
-                        if (!this._onOppositeSides(ep1, ep2, exCentroid, newCentroid)) return true;
                     }
                 }
             }
             if (shared === 0 && this.polygonsOverlap(newVerts, exVerts)) return true;
         }
         return false;
+    }
+
+    _countSharedEdges(verts1, verts2) {
+        const TOL = 0.05;
+        let count = 0;
+        for (let i = 0; i < verts1.length; i++) {
+            const ep1 = verts1[i];
+            const ep2 = verts1[(i+1) % verts1.length];
+            const v1match = verts2.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < TOL);
+            const v2match = verts2.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < TOL);
+            if (v1match && v2match) count++;
+        }
+        return count;
     }
 
     _edgesIntersect(p1, p2, p3, p4) {
