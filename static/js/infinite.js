@@ -619,18 +619,51 @@ class InfiniteExplorer {
             if (shared >= 2) {
                 const exCentroid = this._centroid(exVerts);
                 const newCentroid = this._centroid(newVerts);
-
                 for (let i = 0; i < exVerts.length; i++) {
                     const ep1 = exVerts[i];
                     const ep2 = exVerts[(i+1) % exVerts.length];
                     const v1match = newVerts.some(v => Math.hypot(v.x - ep1.x, v.y - ep1.y) < 0.05);
                     const v2match = newVerts.some(v => Math.hypot(v.x - ep2.x, v.y - ep2.y) < 0.05);
-                    if (v1match && v2match) {  // only check shared edges
+                    if (v1match && v2match) {
                         if (!this._onOppositeSides(ep1, ep2, newCentroid, exCentroid)) return true;
                     }
                 }
             }
-            if (shared === 0 && this._polygonsIntersectEdges(newVerts, exVerts)) return true;
+
+            // For any number of shared vertices, check if non-shared edges cross
+            if (this._polygonsIntersectNonSharedEdges(newVerts, exVerts)) return true;
+
+            if (shared === 0) {
+                if (this._pointInPolygon(this._centroid(exVerts), newVerts)) return true;
+                if (this._pointInPolygon(this._centroid(newVerts), exVerts)) return true;
+            }
+        }
+        return false;
+    }
+
+    _polygonsIntersectNonSharedEdges(vertsA, vertsB) {
+    const TOL = 1.0;
+        for (let i = 0; i < vertsA.length; i++) {
+            const a1 = vertsA[i], a2 = vertsA[(i + 1) % vertsA.length];
+            // Only skip if this edge is a genuine shared edge (both endpoints match AND they're adjacent in B)
+            let isSharedEdge = false;
+            for (let j = 0; j < vertsB.length; j++) {
+                const b1 = vertsB[j], b2 = vertsB[(j + 1) % vertsB.length];
+                if (Math.hypot(a1.x - b1.x, a1.y - b1.y) < TOL && Math.hypot(a2.x - b2.x, a2.y - b2.y) < TOL) { isSharedEdge = true; break; }
+                if (Math.hypot(a1.x - b2.x, a1.y - b2.y) < TOL && Math.hypot(a2.x - b1.x, a2.y - b1.y) < TOL) { isSharedEdge = true; break; }
+            }
+            if (isSharedEdge) continue;
+            for (let j = 0; j < vertsB.length; j++) {
+                const b1 = vertsB[j], b2 = vertsB[(j + 1) % vertsB.length];
+                let bShared = false;
+                for (let k = 0; k < vertsA.length; k++) {
+                    const c1 = vertsA[k], c2 = vertsA[(k + 1) % vertsA.length];
+                    if (Math.hypot(b1.x - c1.x, b1.y - c1.y) < TOL && Math.hypot(b2.x - c2.x, b2.y - c2.y) < TOL) { bShared = true; break; }
+                    if (Math.hypot(b1.x - c2.x, b1.y - c2.y) < TOL && Math.hypot(b2.x - c1.x, b2.y - c1.y) < TOL) { bShared = true; break; }
+                }
+                if (bShared) continue;
+                if (this._edgesIntersect(a1, a2, b1, b2)) return true;
+            }
         }
         return false;
     }
