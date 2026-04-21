@@ -1,4 +1,4 @@
-import { Matrix } from './common/Matrix.js';
+import { Transform } from './common/Transform.js';
 import { HatGeometry } from './common/HatGeometry.js';
 import { TilingSystem } from './common/TilingSystem.js';
 import { Tile } from './common/Tile.js';
@@ -161,22 +161,13 @@ class ConstraintTester {
     generate() {
         this.tiling = new TilingSystem(this.geometry);
         
-        const scaling = Matrix.scale(30);
-        const translation = Matrix.translation(400, 300);
-    
-        // IMPORTANT: no manual flip here
-        const baseTransform = translation.multiply(scaling);
-    
-        const rootTile = this.tiling.addRootTile(
-            baseTransform,
-            Tile.DARK_BLUE // color determines chirality
-        );
-    
-        rootTile.occupiedEdges = [];
-        rootTile.tileIndex = 0;
-    
+        const baseTransform = Transform.identity()
+            .multiply(Transform.translation(400, 300))
+            .multiply(Transform.scale(30));
+        
+        const rootTile = this.tiling.addRootTile(baseTransform, Tile.COLORS.LIGHT_BLUE);
         this.tiles = [rootTile];
-    
+        
         this.updateParentSelector();
         this.updateStatus();
         this.draw();
