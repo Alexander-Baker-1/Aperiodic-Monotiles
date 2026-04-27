@@ -89,7 +89,7 @@ class InfiniteExplorer {
     }
 
     randomSeed() {
-        this.seed = 646595; // Math.floor(Math.random() * 1000000);
+        this.seed = Math.floor(Math.random() * 1000000);
         document.getElementById('seed').value = this.seed;
         this.shouldFlip = this.seededRandom() < 0.5;
         this.randomAngle = this.seededRandom() * 2 * Math.PI;
@@ -209,7 +209,7 @@ class InfiniteExplorer {
         this.rootTile = tiling.tiles[0];
         this._addToGrid(tiling.tiles[0]);
 
-        const TARGET_TILES = 18;
+        const TARGET_TILES = 50;
         this.backtrackingFill(tiling, TARGET_TILES);
 
         const curve = parseFloat(document.getElementById('curve').value);
