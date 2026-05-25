@@ -168,20 +168,19 @@ class InfiniteExplorer {
     // ─── Generate ─────────────────────────────────────────────────────────────
 
     generate() {
+        this._needsReseed = false;
         if (this.shouldFlip === undefined || this.randomAngle === undefined) return;
 
-        this._vertsCache = new Map();
-        this._bboxCache  = new Map();
-        this._spatialGrid = new Map();
-
-        const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = 1200 * dpr;
-        this.canvas.height = 800 * dpr;
+        // Clear canvas immediately so stale renders don't persist through reseeds
+        this.canvas.width = 1200;
+        this.canvas.height = 800;
         this.canvas.style.width = '1200px';
         this.canvas.style.height = '800px';
-        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.fillStyle = '#fff';
-        this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this._vertsCache = new Map();
 
         const a = Math.max(parseFloat(document.getElementById('a').value), 0.001);
         const b = Math.max(parseFloat(document.getElementById('b').value), 0.001);
@@ -195,14 +194,14 @@ class InfiniteExplorer {
         let rootTransform = Transform.identity()
             .multiply(Transform.translation(this.canvas.width / 2, this.canvas.height / 2))
             .multiply(Transform.rotation(randomAngle))
-            .multiply(Transform.scale(20));
+            .multiply(Transform.scale(30));
 
         if (shouldFlip) {
             rootTransform = Transform.identity()
                 .multiply(Transform.translation(this.canvas.width / 2, this.canvas.height / 2))
                 .multiply(Transform.rotation(randomAngle))
                 .multiply(Transform.flipX())
-                .multiply(Transform.scale(20));
+                .multiply(Transform.scale(30));
         }
 
         tiling.addRootTile(rootTransform, rootColor);
@@ -211,6 +210,11 @@ class InfiniteExplorer {
 
         const TARGET_TILES = 50;
         this.backtrackingFill(tiling, TARGET_TILES);
+
+        if (this._needsReseed) {
+            this.randomSeed();
+            return;
+        }
 
         const curve = parseFloat(document.getElementById('curve').value);
         tiling.render(this.ctx, curve);
@@ -241,7 +245,7 @@ class InfiniteExplorer {
         const retryCount = new Map();
 
         let safety = 0;
-        while (tiling.tiles.length < targetCount && safety < 500) {
+        while (tiling.tiles.length < targetCount && safety < 2000) {
             safety++;
 
             if (frontier.length === 0) {
@@ -268,6 +272,11 @@ class InfiniteExplorer {
                 console.log(`  stack top placed: [${stack.length > 0 ? stack[stack.length-1].placed.map(p => tiling.tiles.indexOf(p.neighbor)) : 'empty'}]`);
                 // Instead of skipping, backtrack
                 if (stack.length === 0) {
+                    if (tiling.tiles.length <= 1) {
+                        console.log('Root tile stuck, reseeding...');
+                        this._needsReseed = true;
+                        return;
+                    }
                     frontier.shift();
                     processed.add(tile);
                     continue;
@@ -322,6 +331,11 @@ class InfiniteExplorer {
                 retryCount.set(tile, retries + 1);
 
                 if (stack.length === 0) {
+                    if (tiling.tiles.length <= 1) {
+                        console.log('Root tile stuck on failure, reseeding...');
+                        this._needsReseed = true;
+                        return;
+                    }
                     frontier.shift();
                     continue;
                 }
@@ -473,11 +487,17 @@ class InfiniteExplorer {
             }
         }
 
-        const unoccupied = [];
+        const trulyUnfilled = [];
         for (let e = 0; e < 14; e++) {
-            if (!tile.occupiedEdges.has(e)) unoccupied.push(e);
+            if (!tile.occupiedEdges.has(e)) {
+                const candidates = edgeCandidates[e].candidates;
+                if (candidates.length > 0) {
+                    trulyUnfilled.push(e);
+                }
+            }
         }
-        if (unoccupied.length > 0) {
+        console.log('trulyUnfilled:', trulyUnfilled, 'candidate counts:', edgeCandidates.map(e => e.candidates.length));
+        if (trulyUnfilled.length > 0) {
             for (const { neighbor, parentEdge, neighborEdge } of placed) {
                 this._removeFromGrid(neighbor);
                 this._invalidateCache(neighbor);
@@ -647,7 +667,8 @@ class InfiniteExplorer {
         console.log(`    oppSides check: tile=${tiling.tiles.indexOf(entry.tile)} edge=${rootEdge} neighborCentroid=(${neighborCentroid.x.toFixed(1)},${neighborCentroid.y.toFixed(1)}) parentCentroid=(${parentCentroid.x.toFixed(1)},${parentCentroid.y.toFixed(1)}) p1=(${p1.x.toFixed(1)},${p1.y.toFixed(1)}) p2=(${p2.x.toFixed(1)},${p2.y.toFixed(1)})`);
 
 
-        if (!this._onOppositeSides(p1, p2, neighborCentroid, parentCentroid)) {
+        const isRootTile = tiling.tiles.indexOf(entry.tile) === 0;
+        if (!isRootTile && !this._onOppositeSides(p1, p2, neighborCentroid, parentCentroid)) {
             console.log(`    rejected by oppositeSides (edge ${rootEdge})`);
             return null;
         }
